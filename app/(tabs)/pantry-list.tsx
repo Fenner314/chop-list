@@ -1,71 +1,491 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, Alert, Modal, FlatList, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAppSelector } from '@/store/hooks';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { PantryListItem, removeItem, updateItemCategory, reorderItems } from '@/store/slices/pantryListSlice';
+import { initializeCategories, updateCategory, Category } from '@/store/slices/settingsSlice';
+import { ChopText } from '@/components/chop-text';
+import { AddPantryItemModal } from '@/components/add-pantry-item-modal';
+import { CategoryModal } from '@/components/category-modal';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+
+// Type for list items that includes both items and category headers
+type ListItem =
+  | { type: 'category'; categoryId: string; title: string; color: string; itemCount: number }
+  | { type: 'item'; item: PantryListItem; categoryId: string };
 
 export default function PantryListScreen() {
+  const dispatch = useAppDispatch();
   const items = useAppSelector(state => state.pantryList.items);
-  const themeColor = useAppSelector(state => state.settings.themeColor);
-  const fontSize = useAppSelector(state => state.settings.fontSize);
+  const categories = useAppSelector(state => state.settings.categories || []);
   const darkMode = useAppSelector(state => state.settings.darkMode);
+  const themeColor = useAppSelector(state => state.settings.themeColor);
+  const sortBy = useAppSelector(state => state.settings.pantryListSettings.sortBy);
 
-  const fontSizeValue = fontSize === 'small' ? 14 : fontSize === 'large' ? 20 : 16;
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editItem, setEditItem] = useState<PantryListItem | undefined>();
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [moveCategoryModalVisible, setMoveCategoryModalVisible] = useState(false);
+  const [itemToMove, setItemToMove] = useState<PantryListItem | undefined>();
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | undefined>();
+
+  // Create flat list with category headers and items
+  const flatListData = useMemo((): ListItem[] => {
+    const data: ListItem[] = [];
+
+    // Sort items within each category
+    const sortItems = (itemsList: PantryListItem[]) => {
+      switch (sortBy) {
+        case 'alphabetical':
+          return [...itemsList].sort((a, b) => a.name.localeCompare(b.name));
+        case 'expiration':
+          return [...itemsList].sort((a, b) => {
+            if (!a.expirationDate) return 1;
+            if (!b.expirationDate) return -1;
+            return a.expirationDate - b.expirationDate;
+          });
+        case 'manual':
+        default:
+          return [...itemsList].sort((a, b) => (a.order || 0) - (b.order || 0));
+      }
+    };
+
+    categories.forEach(category => {
+      const categoryItems = items.filter(item => item.category === category.id);
+      if (categoryItems.length > 0) {
+        // Add category header
+        data.push({
+          type: 'category',
+          categoryId: category.id,
+          title: category.name,
+          color: category.color,
+          itemCount: categoryItems.length,
+        });
+
+        // Add items if category is expanded
+        if (expandedCategories.has(category.id)) {
+          sortItems(categoryItems).forEach(item => {
+            data.push({
+              type: 'item',
+              item,
+              categoryId: category.id,
+            });
+          });
+        }
+      }
+    });
+
+    return data;
+  }, [items, categories, sortBy, expandedCategories]);
+
+  // Initialize categories if empty (migration from old persisted state)
+  useEffect(() => {
+    dispatch(initializeCategories());
+  }, [dispatch]);
+
+  // Auto-expand all categories on mount
+  useEffect(() => {
+    const categoryIds = categories
+      .filter(cat => items.some(item => item.category === cat.id))
+      .map(cat => cat.id);
+    setExpandedCategories(new Set(categoryIds));
+  }, [categories.length, items.length > 0]);
+
+  const toggleCategory = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  const handleEditItem = (item: PantryListItem) => {
+    if (multiSelectMode) return;
+    setEditItem(item);
+    setModalVisible(true);
+  };
+
+  const handleAddNew = () => {
+    setEditItem(undefined);
+    setModalVisible(true);
+  };
+
+  const handleLongPress = (itemId: string) => {
+    setMultiSelectMode(true);
+    setSelectedItems(new Set([itemId]));
+  };
+
+  const handleItemPress = (item: PantryListItem) => {
+    if (multiSelectMode) {
+      const newSelected = new Set(selectedItems);
+      if (newSelected.has(item.id)) {
+        newSelected.delete(item.id);
+      } else {
+        newSelected.add(item.id);
+      }
+      setSelectedItems(newSelected);
+
+      // Exit multi-select mode if no items selected
+      if (newSelected.size === 0) {
+        setMultiSelectMode(false);
+      }
+    } else {
+      handleEditItem(item);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    Alert.alert(
+      'Delete Items',
+      `Are you sure you want to delete ${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            selectedItems.forEach(itemId => dispatch(removeItem(itemId)));
+            setSelectedItems(new Set());
+            setMultiSelectMode(false);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCancelMultiSelect = () => {
+    setMultiSelectMode(false);
+    setSelectedItems(new Set());
+  };
+
+  const handleMoveItem = (item: PantryListItem) => {
+    setItemToMove(item);
+    setMoveCategoryModalVisible(true);
+  };
+
+  const handleMoveToCategory = (newCategoryId: string) => {
+    if (itemToMove) {
+      dispatch(updateItemCategory({ id: itemToMove.id, category: newCategoryId }));
+      setMoveCategoryModalVisible(false);
+      setItemToMove(undefined);
+    }
+  };
+
+  const handleEditCategory = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (category) {
+      setEditingCategory(category);
+      setCategoryModalVisible(true);
+    }
+  };
+
+  const handleSaveCategory = (categoryData: { name: string; color: string; icon?: string }) => {
+    if (editingCategory) {
+      dispatch(updateCategory({ ...editingCategory, ...categoryData }));
+    }
+  };
 
   const isExpired = (expirationDate?: number) => {
     if (!expirationDate) return false;
     return expirationDate < Date.now();
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]} edges={['top']}>
-      <View style={styles.content}>
-        <Text style={[styles.title, { fontSize: fontSizeValue + 8, color: themeColor }]}>
-          Pantry List
-        </Text>
-      {items.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { fontSize: fontSizeValue, color: darkMode ? '#999' : '#666' }]}>
-            No items in your pantry
-          </Text>
-          <Text style={[styles.emptySubtext, { fontSize: fontSizeValue - 2, color: darkMode ? '#666' : '#999' }]}>
-            Tap the + button to add items
-          </Text>
+  const isExpiringSoon = (expirationDate?: number) => {
+    if (!expirationDate) return false;
+    const warningDays = 7;
+    const warningTime = Date.now() + warningDays * 24 * 60 * 60 * 1000;
+    return expirationDate <= warningTime && expirationDate > Date.now();
+  };
+
+  const handleDragEnd = useCallback(({ data }: { data: ListItem[] }) => {
+    // Extract items from the reordered list
+    const reorderedItems: PantryListItem[] = [];
+    let currentCategory = '';
+
+    data.forEach((listItem) => {
+      if (listItem.type === 'category') {
+        currentCategory = listItem.categoryId;
+      } else if (listItem.type === 'item') {
+        // Update category if item was moved to a different category
+        const item = listItem.item;
+        if (item.category !== currentCategory && currentCategory) {
+          dispatch(updateItemCategory({ id: item.id, category: currentCategory }));
+        }
+        reorderedItems.push({ ...item, category: currentCategory || item.category });
+      }
+    });
+
+    // If dragging selected items, move them all together
+    if (multiSelectMode && selectedItems.size > 0) {
+      const firstSelectedItem = reorderedItems.find(item => selectedItems.has(item.id));
+      if (firstSelectedItem) {
+        const targetCategory = firstSelectedItem.category;
+        selectedItems.forEach(itemId => {
+          const item = items.find(i => i.id === itemId);
+          if (item && item.category !== targetCategory) {
+            dispatch(updateItemCategory({ id: itemId, category: targetCategory }));
+          }
+        });
+      }
+    }
+
+    // Dispatch reorder action
+    dispatch(reorderItems(reorderedItems));
+  }, [dispatch, items, multiSelectMode, selectedItems]);
+
+  const renderItem = ({ item: listItem, drag, isActive }: RenderItemParams<ListItem>) => {
+    if (listItem.type === 'category') {
+      const isExpanded = expandedCategories.has(listItem.categoryId);
+      return (
+        <View style={[styles.categoryHeader, { backgroundColor: listItem.color }]}>
+          <TouchableOpacity
+            style={styles.categoryHeaderMain}
+            onPress={() => toggleCategory(listItem.categoryId)}
+          >
+            <View style={styles.categoryHeaderContent}>
+              <ChopText size="medium" weight="semibold" color="#333">
+                {listItem.title}
+              </ChopText>
+              <ChopText size="small" color="#666">
+                {listItem.itemCount} {listItem.itemCount === 1 ? 'item' : 'items'}
+              </ChopText>
+            </View>
+            <ChopText size="large" color="#333">
+              {isExpanded ? '−' : '+'}
+            </ChopText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.categoryEditButton}
+            onPress={() => handleEditCategory(listItem.categoryId)}
+          >
+            <IconSymbol name="pencil" size={18} color="#666" />
+          </TouchableOpacity>
         </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={[styles.itemContainer, { borderBottomColor: darkMode ? '#333' : '#eee' }]}>
-              <View style={styles.itemContent}>
-                <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#000' }]}>
-                    {item.name}
-                  </Text>
-                  {item.expirationDate && (
-                    <Text
-                      style={[
-                        styles.expirationText,
-                        { fontSize: fontSizeValue - 4 },
-                        isExpired(item.expirationDate) && styles.expiredText,
-                      ]}
-                    >
-                      {isExpired(item.expirationDate)
-                        ? 'Expired'
-                        : `Expires: ${new Date(item.expirationDate).toLocaleDateString()}`}
-                    </Text>
-                  )}
+      );
+    }
+
+    // Item rendering
+    const { item, categoryId } = listItem;
+    const expired = isExpired(item.expirationDate);
+    const expiringSoon = isExpiringSoon(item.expirationDate);
+    const isSelected = selectedItems.has(item.id);
+
+    return (
+      <ScaleDecorator>
+        <View
+          style={[
+            styles.itemContainer,
+            { borderBottomColor: darkMode ? '#333' : '#eee' },
+            isSelected && { backgroundColor: darkMode ? '#1c3a4a' : '#e3f2fd' },
+            isActive && { backgroundColor: darkMode ? '#2c3e50' : '#bbdefb' },
+          ]}
+        >
+          {multiSelectMode && (
+            <TouchableOpacity
+              style={styles.checkbox}
+              onPress={() => handleItemPress(item)}
+            >
+              <IconSymbol
+                name={isSelected ? 'checkmark.circle' : 'circle'}
+                size={24}
+                color={isSelected ? themeColor : darkMode ? '#666' : '#ccc'}
+              />
+            </TouchableOpacity>
+          )}
+          {!multiSelectMode && (
+            <TouchableOpacity
+              style={styles.dragHandle}
+              onLongPress={drag}
+              delayLongPress={0}
+            >
+              <IconSymbol
+                name="line.horizontal.3"
+                size={20}
+                color={darkMode ? '#666' : '#999'}
+              />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.itemContent}
+            onPress={() => handleItemPress(item)}
+            onLongPress={() => handleLongPress(item.id)}
+          >
+            <View style={styles.itemInfo}>
+              <ChopText size="medium" useGlobalFontSize style={styles.itemName}>
+                {item.name}
+              </ChopText>
+              {item.expirationDate && (
+                <ChopText
+                  size="xs"
+                  variant={expired ? 'error' : expiringSoon ? 'warning' : 'muted'}
+                >
+                  {expired
+                    ? 'Expired'
+                    : `Expires: ${new Date(item.expirationDate).toLocaleDateString()}`}
+                </ChopText>
+              )}
+            </View>
+            <ChopText size="small" variant="muted">
+              {item.quantity}
+            </ChopText>
+          </TouchableOpacity>
+          {!multiSelectMode && (
+            <TouchableOpacity
+              style={styles.moveButton}
+              onPress={() => handleMoveItem(item)}
+            >
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={darkMode ? '#666' : '#999'}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScaleDecorator>
+    );
+  };
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]}
+        edges={['top']}
+      >
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <ChopText size="xxl" weight="bold" variant="theme" style={styles.title}>
+              Pantry List
+            </ChopText>
+            {multiSelectMode && (
+              <View style={styles.multiSelectToolbar}>
+                <ChopText size="small" variant="muted">
+                  {selectedItems.size} selected
+                </ChopText>
+                <View style={styles.toolbarActions}>
+                  <TouchableOpacity
+                    onPress={handleDeleteSelected}
+                    style={styles.toolbarButton}
+                    disabled={selectedItems.size === 0}
+                  >
+                    <IconSymbol name="trash" size={20} color="#ff3b30" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleCancelMultiSelect}
+                    style={styles.toolbarButton}
+                  >
+                    <ChopText size="small" variant="theme">Cancel</ChopText>
+                  </TouchableOpacity>
                 </View>
-                <Text style={[styles.itemQuantity, { fontSize: fontSizeValue - 2, color: darkMode ? '#999' : '#666' }]}>
-                  {item.quantity}
-                </Text>
+              </View>
+            )}
+          </View>
+
+          {flatListData.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <ChopText size="medium" variant="muted" useGlobalFontSize>
+                No items in your pantry
+              </ChopText>
+              <ChopText size="small" variant="muted" style={styles.emptySubtext}>
+                Tap the + button to add items
+              </ChopText>
+              <ChopText size="xs" variant="muted" style={{ marginTop: 16, textAlign: 'center' }}>
+                Items will be automatically organized into categories!
+              </ChopText>
+            </View>
+          ) : (
+            <DraggableFlatList
+              data={flatListData}
+              onDragEnd={handleDragEnd}
+              keyExtractor={(item, index) =>
+                item.type === 'category' ? `cat-${item.categoryId}` : `item-${item.item.id}`
+              }
+              renderItem={renderItem}
+              containerStyle={styles.list}
+            />
+          )}
+
+          {/* Floating Action Button */}
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: themeColor }]}
+            onPress={handleAddNew}
+            activeOpacity={0.8}
+          >
+            <IconSymbol name="plus" size={28} color="#fff" />
+          </TouchableOpacity>
+
+          <AddPantryItemModal
+            visible={modalVisible}
+            onClose={() => {
+              setModalVisible(false);
+              setEditItem(undefined);
+            }}
+            editItem={editItem}
+          />
+
+          {/* Move to Category Modal */}
+          <Modal
+            visible={moveCategoryModalVisible}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setMoveCategoryModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.moveCategoryModal, { backgroundColor: darkMode ? '#1c1c1e' : '#fff' }]}>
+                <View style={styles.modalHeader}>
+                  <ChopText size="xl" weight="bold">
+                    Move to Category
+                  </ChopText>
+                  <TouchableOpacity onPress={() => setMoveCategoryModalVisible(false)}>
+                    <ChopText size="large" variant="muted">✕</ChopText>
+                  </TouchableOpacity>
+                </View>
+
+                <FlatList
+                  data={categories}
+                  keyExtractor={(cat) => cat.id}
+                  renderItem={({ item: category }) => (
+                    <TouchableOpacity
+                      style={[
+                        styles.categoryOption,
+                        { backgroundColor: category.color },
+                        itemToMove?.category === category.id && styles.currentCategory,
+                      ]}
+                      onPress={() => handleMoveToCategory(category.id)}
+                    >
+                      <ChopText size="medium" weight="semibold" color="#333">
+                        {category.name}
+                      </ChopText>
+                      {itemToMove?.category === category.id && (
+                        <ChopText size="small" color="#666">(Current)</ChopText>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                />
               </View>
             </View>
-          )}
-        />
-      )}
-      </View>
-    </SafeAreaView>
+          </Modal>
+
+          {/* Category Edit Modal */}
+          <CategoryModal
+            visible={categoryModalVisible}
+            onClose={() => {
+              setCategoryModalVisible(false);
+              setEditingCategory(undefined);
+            }}
+            onSave={handleSaveCategory}
+            editCategory={editingCategory}
+          />
+        </View>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
@@ -77,28 +497,81 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  header: {
+    marginBottom: 16,
+  },
   title: {
-    fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  multiSelectToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  toolbarActions: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'center',
+  },
+  toolbarButton: {
+    padding: 8,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  emptyText: {
-    marginBottom: 8,
-  },
   emptySubtext: {
+    marginTop: 8,
   },
-  itemContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
+  list: {
+    flex: 1,
   },
-  itemContent: {
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
+    borderRadius: 8,
+  },
+  categoryHeaderMain: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 12,
+  },
+  categoryHeaderContent: {
+    flex: 1,
+  },
+  categoryEditButton: {
+    padding: 12,
+  },
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+  },
+  checkbox: {
+    padding: 16,
+    paddingRight: 8,
+  },
+  dragHandle: {
+    padding: 16,
+    paddingRight: 8,
+  },
+  moveButton: {
+    padding: 16,
+    paddingLeft: 8,
+  },
+  itemContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
   },
   itemInfo: {
     flex: 1,
@@ -106,14 +579,53 @@ const styles = StyleSheet.create({
   itemName: {
     marginBottom: 4,
   },
-  itemQuantity: {
-    marginLeft: 12,
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
-  expirationText: {
-    color: '#ff9500',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  expiredText: {
-    color: '#ff3b30',
-    fontWeight: '600',
+  moveCategoryModal: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  categoryOption: {
+    padding: 16,
+    marginHorizontal: 20,
+    marginVertical: 6,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  currentCategory: {
+    borderWidth: 2,
+    borderColor: '#666',
   },
 });

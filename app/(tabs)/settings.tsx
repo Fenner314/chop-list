@@ -1,139 +1,426 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { setThemeColor, setFontSize, setDarkMode } from '@/store/slices/settingsSlice';
+import { CategoryModal } from "@/components/category-modal";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  addCategory,
+  Category,
+  deleteCategory,
+  setDarkMode,
+  setFontSize,
+  setThemeColor,
+  updateCategory,
+} from "@/store/slices/settingsSlice";
+import React, { useState } from "react";
+import {
+  Alert,
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
   const dispatch = useAppDispatch();
-  const settings = useAppSelector(state => state.settings);
-  const { themeColor, fontSize, darkMode } = settings;
+  const settings = useAppSelector((state) => state.settings);
+  const { themeColor, fontSize, darkMode, categories } = settings;
 
-  const fontSizeValue = fontSize === 'small' ? 14 : fontSize === 'large' ? 20 : 16;
+  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<
+    Category | undefined
+  >();
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const [categoryRotation] = useState(new Animated.Value(0));
+
+  const fontSizeValue =
+    fontSize === "small" ? 14 : fontSize === "large" ? 20 : 16;
+
+  // Animate caret rotation
+  const toggleCategoriesExpanded = () => {
+    const toValue = categoriesExpanded ? 0 : 1;
+    Animated.timing(categoryRotation, {
+      toValue,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    setCategoriesExpanded(!categoriesExpanded);
+  };
+
+  const categoryRotateInterpolate = categoryRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "90deg"],
+  });
 
   const themeColors = [
-    { name: 'Blue', value: '#007AFF' },
-    { name: 'Green', value: '#34C759' },
-    { name: 'Red', value: '#FF3B30' },
-    { name: 'Orange', value: '#FF9500' },
-    { name: 'Purple', value: '#AF52DE' },
-    { name: 'Pink', value: '#FF2D55' },
+    { name: "Blue", value: "#007AFF" },
+    { name: "Green", value: "#34C759" },
+    { name: "Red", value: "#FF3B30" },
+    { name: "Orange", value: "#FF9500" },
+    { name: "Purple", value: "#AF52DE" },
+    { name: "Pink", value: "#FF2D55" },
   ];
 
+  const handleAddCategory = () => {
+    setEditingCategory(undefined);
+    setCategoryModalVisible(true);
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryModalVisible(true);
+  };
+
+  const handleDeleteCategory = (category: Category) => {
+    Alert.alert(
+      "Delete Category",
+      `Are you sure you want to delete "${category.name}"? Items in this category will be moved to "Other".`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => dispatch(deleteCategory(category.id)),
+        },
+      ]
+    );
+  };
+
+  const handleSaveCategory = (categoryData: {
+    name: string;
+    color: string;
+    icon?: string;
+  }) => {
+    if (editingCategory) {
+      dispatch(updateCategory({ ...editingCategory, ...categoryData }));
+    } else {
+      dispatch(addCategory(categoryData));
+    }
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]} edges={['top']}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: darkMode ? "#000" : "#fff" },
+      ]}
+      edges={["top"]}
+    >
       <ScrollView style={styles.content}>
-        <Text style={[styles.mainTitle, { fontSize: fontSizeValue + 8, color: themeColor }]}>
+        <Text
+          style={[
+            styles.mainTitle,
+            { fontSize: fontSizeValue + 8, color: themeColor },
+          ]}
+        >
           Settings
         </Text>
 
-      <View style={[styles.section, { borderBottomColor: darkMode ? '#333' : '#eee' }]}>
-        <Text style={[styles.sectionTitle, { fontSize: fontSizeValue + 2, color: darkMode ? '#fff' : '#333' }]}>
-          General Settings
-        </Text>
+        <View
+          style={[
+            styles.section,
+            { borderBottomColor: darkMode ? "#333" : "#eee" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                fontSize: fontSizeValue + 2,
+                color: darkMode ? "#fff" : "#333",
+              },
+            ]}
+          >
+            General Settings
+          </Text>
 
-        <View style={styles.settingItem}>
-          <Text style={[styles.settingLabel, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#333' }]}>Dark Mode</Text>
-          <Switch
-            value={darkMode}
-            onValueChange={(value) => dispatch(setDarkMode(value))}
-            trackColor={{ false: '#767577', true: themeColor }}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <Text style={[styles.settingLabel, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#333' }]}>Theme Color</Text>
-        </View>
-        <View style={styles.colorPickerContainer}>
-          {themeColors.map((color) => (
-            <TouchableOpacity
-              key={color.value}
+          <View style={styles.settingItem}>
+            <Text
               style={[
-                styles.colorButton,
-                { backgroundColor: color.value },
-                themeColor === color.value && { borderColor: darkMode ? '#fff' : '#000', borderWidth: 3 },
+                styles.settingLabel,
+                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
               ]}
-              onPress={() => dispatch(setThemeColor(color.value))}
             >
-              {themeColor === color.value && <Text style={styles.checkmark}>✓</Text>}
-            </TouchableOpacity>
-          ))}
-        </View>
+              Dark Mode
+            </Text>
+            <Switch
+              value={darkMode}
+              onValueChange={(value) => dispatch(setDarkMode(value))}
+              trackColor={{ false: "#767577", true: themeColor }}
+            />
+          </View>
 
-        <View style={styles.settingItem}>
-          <Text style={[styles.settingLabel, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#333' }]}>Font Size</Text>
-        </View>
-        <View style={styles.fontSizeContainer}>
-          {(['small', 'medium', 'large'] as const).map((size) => (
-            <TouchableOpacity
-              key={size}
+          <View style={styles.settingItem}>
+            <Text
               style={[
-                styles.fontSizeButton,
-                { backgroundColor: darkMode ? '#222' : '#f0f0f0' },
-                fontSize === size && { backgroundColor: themeColor },
+                styles.settingLabel,
+                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
               ]}
-              onPress={() => dispatch(setFontSize(size))}
             >
-              <Text
+              Theme Color
+            </Text>
+          </View>
+          <View style={styles.colorPickerContainer}>
+            {themeColors.map((color) => (
+              <TouchableOpacity
+                key={color.value}
                 style={[
-                  styles.fontSizeText,
-                  { fontSize: fontSizeValue - 2, color: darkMode ? '#fff' : '#333' },
-                  fontSize === size && styles.selectedFontSizeText,
+                  styles.colorButton,
+                  { backgroundColor: color.value },
+                  themeColor === color.value && {
+                    borderColor: darkMode ? "#fff" : "#000",
+                    borderWidth: 3,
+                  },
                 ]}
+                onPress={() => dispatch(setThemeColor(color.value))}
               >
-                {size.charAt(0).toUpperCase() + size.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                {themeColor === color.value && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.settingItem}>
+            <Text
+              style={[
+                styles.settingLabel,
+                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
+              ]}
+            >
+              Font Size
+            </Text>
+          </View>
+          <View style={styles.fontSizeContainer}>
+            {(["small", "medium", "large"] as const).map((size) => (
+              <TouchableOpacity
+                key={size}
+                style={[
+                  styles.fontSizeButton,
+                  { backgroundColor: darkMode ? "#222" : "#f0f0f0" },
+                  fontSize === size && { backgroundColor: themeColor },
+                ]}
+                onPress={() => dispatch(setFontSize(size))}
+              >
+                <Text
+                  style={[
+                    styles.fontSizeText,
+                    {
+                      fontSize: fontSizeValue - 2,
+                      color: darkMode ? "#fff" : "#333",
+                    },
+                    fontSize === size && styles.selectedFontSizeText,
+                  ]}
+                >
+                  {size.charAt(0).toUpperCase() + size.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-      </View>
 
-      <View style={[styles.section, { borderBottomColor: darkMode ? '#333' : '#eee' }]}>
-        <Text style={[styles.sectionTitle, { fontSize: fontSizeValue + 2, color: darkMode ? '#fff' : '#333' }]}>
-          Feature Settings
-        </Text>
+        <View
+          style={[
+            styles.section,
+            { borderBottomColor: darkMode ? "#333" : "#eee" },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.collapsibleSectionHeader}
+            onPress={toggleCategoriesExpanded}
+          >
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  fontSize: fontSizeValue + 2,
+                  color: darkMode ? "#fff" : "#333",
+                },
+              ]}
+            >
+              Categories ({categories.length})
+            </Text>
+            <View style={styles.sectionHeaderActions}>
+              {categoriesExpanded && (
+                <TouchableOpacity
+                  onPress={handleAddCategory}
+                  style={styles.addButton}
+                >
+                  <IconSymbol name="plus" size={20} color={themeColor} />
+                </TouchableOpacity>
+              )}
+              <Animated.View
+                style={{ transform: [{ rotate: categoryRotateInterpolate }] }}
+              >
+                <Text
+                  style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}
+                >
+                  ›
+                </Text>
+              </Animated.View>
+            </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={[styles.settingButtonText, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#333' }]}>
-            Shopping List Settings
+          {categoriesExpanded && (
+            <View style={styles.categoryList}>
+              {categories.map((category) => (
+                <View
+                  key={category.id}
+                  style={[
+                    styles.categoryItem,
+                    { backgroundColor: category.color },
+                  ]}
+                >
+                  <Text
+                    style={[styles.categoryName, { fontSize: fontSizeValue }]}
+                  >
+                    {category.name}
+                  </Text>
+                  <View style={styles.categoryActions}>
+                    <TouchableOpacity
+                      onPress={() => handleEditCategory(category)}
+                      style={styles.categoryActionButton}
+                    >
+                      <IconSymbol name="pencil" size={16} color="#666" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteCategory(category)}
+                      style={styles.categoryActionButton}
+                    >
+                      <IconSymbol name="trash" size={16} color="#ff3b30" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View
+          style={[
+            styles.section,
+            { borderBottomColor: darkMode ? "#333" : "#eee" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                fontSize: fontSizeValue + 2,
+                color: darkMode ? "#fff" : "#333",
+              },
+            ]}
+          >
+            Feature Settings
           </Text>
-          <Text style={[styles.arrow, { color: darkMode ? '#666' : '#999' }]}>›</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={[styles.settingButtonText, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#333' }]}>
-            Pantry List Settings
+          <TouchableOpacity style={styles.settingButton}>
+            <Text
+              style={[
+                styles.settingButtonText,
+                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
+              ]}
+            >
+              Shopping List Settings
+            </Text>
+            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
+              ›
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingButton}>
+            <Text
+              style={[
+                styles.settingButtonText,
+                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
+              ]}
+            >
+              Pantry List Settings
+            </Text>
+            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
+              ›
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingButton}>
+            <Text
+              style={[
+                styles.settingButtonText,
+                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
+              ]}
+            >
+              Recipes Settings
+            </Text>
+            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
+              ›
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View
+          style={[
+            styles.section,
+            { borderBottomColor: darkMode ? "#333" : "#eee" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                fontSize: fontSizeValue + 2,
+                color: darkMode ? "#fff" : "#333",
+              },
+            ]}
+          >
+            Account
           </Text>
-          <Text style={[styles.arrow, { color: darkMode ? '#666' : '#999' }]}>›</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={[styles.settingButtonText, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#333' }]}>
-            Recipes Settings
+          <TouchableOpacity style={styles.settingButton}>
+            <Text
+              style={[
+                styles.settingButtonText,
+                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
+              ]}
+            >
+              Account Settings
+            </Text>
+            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
+              ›
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View
+          style={[
+            styles.section,
+            { borderBottomColor: darkMode ? "#333" : "#eee" },
+          ]}
+        >
+          <Text
+            style={[
+              styles.versionText,
+              {
+                fontSize: fontSizeValue - 4,
+                color: darkMode ? "#666" : "#999",
+              },
+            ]}
+          >
+            Version 1.0.0
           </Text>
-          <Text style={[styles.arrow, { color: darkMode ? '#666' : '#999' }]}>›</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.section, { borderBottomColor: darkMode ? '#333' : '#eee' }]}>
-        <Text style={[styles.sectionTitle, { fontSize: fontSizeValue + 2, color: darkMode ? '#fff' : '#333' }]}>
-          Account
-        </Text>
-
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={[styles.settingButtonText, { fontSize: fontSizeValue, color: darkMode ? '#fff' : '#333' }]}>
-            Account Settings
-          </Text>
-          <Text style={[styles.arrow, { color: darkMode ? '#666' : '#999' }]}>›</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.section, { borderBottomColor: darkMode ? '#333' : '#eee' }]}>
-        <Text style={[styles.versionText, { fontSize: fontSizeValue - 4, color: darkMode ? '#666' : '#999' }]}>
-          Version 1.0.0
-        </Text>
-      </View>
+        </View>
       </ScrollView>
+
+      <CategoryModal
+        visible={categoryModalVisible}
+        onClose={() => {
+          setCategoryModalVisible(false);
+          setEditingCategory(undefined);
+        }}
+        onSave={handleSaveCategory}
+        editCategory={editingCategory}
+      />
     </SafeAreaView>
   );
 }
@@ -146,7 +433,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainTitle: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     padding: 20,
     paddingBottom: 10,
   },
@@ -156,20 +443,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   sectionTitle: {
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 16,
   },
   settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
   },
-  settingLabel: {
-  },
+  settingLabel: {},
   colorPickerContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 16,
   },
@@ -177,18 +463,18 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   checkmark: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   fontSizeContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 16,
   },
@@ -197,26 +483,67 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   fontSizeText: {
-    fontWeight: '500',
+    fontWeight: "500",
   },
   selectedFontSizeText: {
-    color: '#fff',
+    color: "#fff",
   },
   settingButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
   },
-  settingButtonText: {
-  },
+  settingButtonText: {},
   arrow: {
     fontSize: 24,
   },
   versionText: {
-    textAlign: 'center',
+    textAlign: "center",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  collapsibleSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  sectionHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  addButton: {
+    padding: 4,
+  },
+  categoryList: {
+    gap: 8,
+    marginTop: 16,
+  },
+  categoryItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 8,
+  },
+  categoryName: {
+    fontWeight: "500",
+    color: "#333",
+  },
+  categoryActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  categoryActionButton: {
+    padding: 4,
   },
 });
