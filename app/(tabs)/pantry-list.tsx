@@ -33,6 +33,7 @@ export default function PantryListScreen() {
   const [itemToMove, setItemToMove] = useState<PantryListItem | undefined>();
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
+  const [isDraggingMultiple, setIsDraggingMultiple] = useState(false);
 
   // Create flat list with category headers and items
   const flatListData = useMemo((): ListItem[] => {
@@ -204,40 +205,75 @@ export default function PantryListScreen() {
     return expirationDate <= warningTime && expirationDate > Date.now();
   };
 
-  const handleDragEnd = useCallback(({ data }: { data: ListItem[] }) => {
-    // Extract items from the reordered list
-    const reorderedItems: PantryListItem[] = [];
-    let currentCategory = '';
+  const handleDragEnd = useCallback(({ data, to }: { data: ListItem[]; to: number }) => {
+    setIsDraggingMultiple(false);
 
-    data.forEach((listItem) => {
+    // Build the new item order from the dragged list
+    const newItemOrder: PantryListItem[] = [];
+    let currentCategory = '';
+    let draggedItemIndex = -1;
+    let targetCategory = '';
+    let draggedItem: PantryListItem | null = null;
+
+    // Extract all items and find where the dragged item landed
+    data.forEach((listItem, index) => {
       if (listItem.type === 'category') {
         currentCategory = listItem.categoryId;
       } else if (listItem.type === 'item') {
-        // Update category if item was moved to a different category
         const item = listItem.item;
-        if (item.category !== currentCategory && currentCategory) {
-          dispatch(updateItemCategory({ id: item.id, category: currentCategory }));
+
+        // Find the dragged item (the one that was moved from 'from' to 'to')
+        if (index === to && multiSelectMode && selectedItems.has(item.id)) {
+          draggedItemIndex = newItemOrder.length;
+          targetCategory = currentCategory;
+          draggedItem = item;
         }
-        reorderedItems.push({ ...item, category: currentCategory || item.category });
+
+        newItemOrder.push({ ...item, category: currentCategory || item.category });
       }
     });
 
-    // If dragging selected items, move them all together
-    if (multiSelectMode && selectedItems.size > 0) {
-      const firstSelectedItem = reorderedItems.find(item => selectedItems.has(item.id));
-      if (firstSelectedItem) {
-        const targetCategory = firstSelectedItem.category;
-        selectedItems.forEach(itemId => {
-          const item = items.find(i => i.id === itemId);
-          if (item && item.category !== targetCategory) {
-            dispatch(updateItemCategory({ id: itemId, category: targetCategory }));
-          }
-        });
+    // If multiple items selected and we dragged one of them, move all selected together
+    if (multiSelectMode && selectedItems.size > 1 && draggedItem && draggedItemIndex >= 0) {
+      // Get all selected items in their current order
+      const selectedArray = items.filter(i => selectedItems.has(i.id));
+
+      // Update all selected items to target category
+      selectedArray.forEach(item => {
+        if (item.category !== targetCategory) {
+          dispatch(updateItemCategory({ id: item.id, category: targetCategory }));
+        }
+      });
+
+      // Remove all selected items from new order
+      const withoutSelected = newItemOrder.filter(i => !selectedItems.has(i.id));
+
+      // Find the position where we want to insert (adjust for removed items before this position)
+      let adjustedIndex = draggedItemIndex;
+      for (let i = 0; i < draggedItemIndex; i++) {
+        if (selectedItems.has(newItemOrder[i].id)) {
+          adjustedIndex--;
+        }
       }
+
+      // Insert all selected items at target position with updated category
+      const movedSelected = selectedArray.map(i => ({ ...i, category: targetCategory }));
+      withoutSelected.splice(adjustedIndex, 0, ...movedSelected);
+
+      // Dispatch once
+      dispatch(reorderItems(withoutSelected));
+      return;
     }
 
-    // Dispatch reorder action
-    dispatch(reorderItems(reorderedItems));
+    // Single item drag - update categories if changed
+    newItemOrder.forEach((item) => {
+      const originalItem = items.find(i => i.id === item.id);
+      if (originalItem && originalItem.category !== item.category) {
+        dispatch(updateItemCategory({ id: item.id, category: item.category }));
+      }
+    });
+
+    dispatch(reorderItems(newItemOrder));
   }, [dispatch, items, multiSelectMode, selectedItems]);
 
   const renderItem = ({ item: listItem, drag, isActive }: RenderItemParams<ListItem>) => {
@@ -277,13 +313,16 @@ export default function PantryListScreen() {
     const expiringSoon = isExpiringSoon(item.expirationDate);
     const isSelected = selectedItems.has(item.id);
 
+    // When in multi-select mode and dragging, show selected items as semi-transparent
+    const itemOpacity = multiSelectMode && isSelected && selectedItems.size > 1 && isActive ? 0.3 : 1;
+
     return (
       <ScaleDecorator>
         <View
           style={[
             styles.itemContainer,
-            { borderBottomColor: darkMode ? '#333' : '#eee' },
-            isSelected && { backgroundColor: darkMode ? '#1c3a4a' : '#e3f2fd' },
+            { borderBottomColor: darkMode ? '#333' : '#eee', opacity: itemOpacity },
+            isSelected && !isActive && { backgroundColor: darkMode ? '#1c3a4a' : '#e3f2fd' },
             isActive && { backgroundColor: darkMode ? '#2c3e50' : '#bbdefb' },
           ]}
         >
@@ -299,7 +338,7 @@ export default function PantryListScreen() {
               />
             </TouchableOpacity>
           )}
-          {!multiSelectMode && (
+          <View style={styles.dragHandleContainer}>
             <TouchableOpacity
               style={styles.dragHandle}
               onLongPress={drag}
@@ -311,7 +350,14 @@ export default function PantryListScreen() {
                 color={darkMode ? '#666' : '#999'}
               />
             </TouchableOpacity>
-          )}
+            {multiSelectMode && isSelected && selectedItems.size > 1 && !isActive && (
+              <View style={[styles.selectedBadge, { backgroundColor: themeColor }]}>
+                <ChopText size="xs" weight="bold" color="#fff">
+                  {selectedItems.size}
+                </ChopText>
+              </View>
+            )}
+          </View>
           <TouchableOpacity
             style={styles.itemContent}
             onPress={() => handleItemPress(item)}
@@ -557,9 +603,30 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingRight: 8,
   },
+  dragHandleContainer: {
+    position: 'relative',
+  },
   dragHandle: {
     padding: 16,
     paddingRight: 8,
+  },
+  dragHandlePlaceholder: {
+    padding: 16,
+    paddingRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 50,
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
   moveButton: {
     padding: 16,
