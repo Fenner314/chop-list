@@ -1,17 +1,30 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs, usePathname } from 'expo-router';
+import React, { useEffect } from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { useAppSelector } from '@/store/hooks';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { setLastVisitedTab } from '@/store/slices/settingsSlice';
 
 export default function TabLayout() {
+  const dispatch = useAppDispatch();
   const themeColor = useAppSelector(state => state.settings.themeColor);
   const darkMode = useAppSelector(state => state.settings.darkMode);
+  const lastVisitedTab = useAppSelector(state => state.settings.lastVisitedTab);
+  const pathname = usePathname();
+
+  // Track tab changes (excluding settings)
+  useEffect(() => {
+    const currentTab = pathname.replace('/(tabs)/', '').replace('/', '');
+    if (currentTab === 'shopping-list' || currentTab === 'pantry-list' || currentTab === 'recipes') {
+      dispatch(setLastVisitedTab(currentTab));
+    }
+  }, [pathname, dispatch]);
 
   return (
     <Tabs
+      initialRouteName={lastVisitedTab}
       screenOptions={{
         tabBarActiveTintColor: themeColor || Colors[darkMode ? 'dark' : 'light'].tint,
         headerShown: false,

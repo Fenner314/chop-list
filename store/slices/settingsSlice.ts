@@ -12,6 +12,7 @@ export interface SettingsState {
   themeColor: string;
   fontSize: 'small' | 'medium' | 'large';
   darkMode: boolean;
+  lastVisitedTab: 'shopping-list' | 'pantry-list' | 'recipes';
 
   // Categories for items
   categories: Category[];
@@ -72,6 +73,7 @@ const initialState: SettingsState = {
   themeColor: '#007AFF',
   fontSize: 'medium',
   darkMode: false,
+  lastVisitedTab: 'pantry-list',
   categories: DEFAULT_CATEGORIES,
   shoppingListSettings: {
     sortBy: 'manual',
@@ -113,6 +115,9 @@ const settingsSlice = createSlice({
     setDarkMode: (state, action: PayloadAction<boolean>) => {
       state.darkMode = action.payload;
     },
+    setLastVisitedTab: (state, action: PayloadAction<'shopping-list' | 'pantry-list' | 'recipes'>) => {
+      state.lastVisitedTab = action.payload;
+    },
     addCategory: (state, action: PayloadAction<Omit<Category, 'id'>>) => {
       const newCategory: Category = {
         ...action.payload,
@@ -149,6 +154,7 @@ export const {
   setThemeColor,
   setFontSize,
   setDarkMode,
+  setLastVisitedTab,
   addCategory,
   updateCategory,
   deleteCategory,
