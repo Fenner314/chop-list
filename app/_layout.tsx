@@ -4,9 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { Provider, useSelector } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { View, ActivityIndicator } from 'react-native';
 
 import { store, persistor, RootState } from '@/store';
+import { CustomSplashScreen } from '@/components/splash-screen';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -29,14 +29,7 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <Provider store={store}>
-      <PersistGate
-        loading={
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" />
-          </View>
-        }
-        persistor={persistor}
-      >
+      <PersistGate loading={<CustomSplashScreen />} persistor={persistor}>
         <RootLayoutContent />
       </PersistGate>
     </Provider>

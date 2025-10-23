@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { setThemeColor, setFontSize, setDarkMode } from '@/store/slices/settingsSlice';
 
@@ -20,10 +21,11 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]}>
-      <Text style={[styles.mainTitle, { fontSize: fontSizeValue + 8, color: themeColor }]}>
-        Settings
-      </Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]} edges={['top']}>
+      <ScrollView style={styles.content}>
+        <Text style={[styles.mainTitle, { fontSize: fontSizeValue + 8, color: themeColor }]}>
+          Settings
+        </Text>
 
       <View style={[styles.section, { borderBottomColor: darkMode ? '#333' : '#eee' }]}>
         <Text style={[styles.sectionTitle, { fontSize: fontSizeValue + 2, color: darkMode ? '#fff' : '#333' }]}>
@@ -131,12 +133,16 @@ export default function SettingsScreen() {
           Version 1.0.0
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
   },
   mainTitle: {

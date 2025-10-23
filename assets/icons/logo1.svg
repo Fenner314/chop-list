@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" role="img" aria-label="ChopList logo">
+  <!-- Define a mask for the handle -->
+  <mask id="handle-mask">
+    <!-- Everything visible -->
+    <rect x="0" y="0" width="100" height="100" fill="white"/>
+    <!-- The handle hole (black = cut out) -->
+    <rect x="42" y="18" width="16" height="6" rx="3" fill="black"/>
+  </mask>
+
+  <!-- Chopping board body with mask applied -->
+  <rect x="20" y="14" width="60" height="72" rx="8" fill="#FF7A59" mask="url(#handle-mask)"/>
+
+  <!-- List lines -->
+  <rect x="30" y="38" width="40" height="4" rx="2" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="30" y="50" width="28" height="4" rx="2" fill="#FFFFFF" opacity="0.95"/>
+  <rect x="30" y="62" width="36" height="4" rx="2" fill="#FFFFFF" opacity="0.95"/>
+</svg>

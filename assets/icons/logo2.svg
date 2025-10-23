@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" role="img" aria-label="ChopList logo with checkboxes">
+  <!-- Mask for handle hole -->
+  <mask id="handle-mask">
+    <rect x="0" y="0" width="100" height="100" fill="white"/>
+    <rect x="42" y="18" width="16" height="6" rx="3" fill="black"/>
+  </mask>
+
+  <!-- Chopping board body with transparent handle -->
+  <rect x="20" y="14" width="60" height="72" rx="8" fill="#FF7A59" mask="url(#handle-mask)"/>
+
+  <!-- List lines with outlined checkboxes -->
+  <!-- Line 1 (checked) -->
+  <rect x="30" y="38" width="6" height="6" rx="1" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+  <path d="M31 40 L33 43 L35 36" stroke="#FFFFFF" stroke-width="1.5" fill="none"/>
+  <rect x="40" y="38" width="30" height="4" rx="2" fill="#FFFFFF" opacity="0.95"/>
+
+  <!-- Line 2 (checked) -->
+  <rect x="30" y="50" width="6" height="6" rx="1" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+  <path d="M31 52 L33 55 L35 48" stroke="#FFFFFF" stroke-width="1.5" fill="none"/>
+  <rect x="40" y="50" width="28" height="4" rx="2" fill="#FFFFFF" opacity="0.95"/>
+
+  <!-- Line 3 (unchecked) -->
+  <rect x="30" y="62" width="6" height="6" rx="1" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+  <rect x="40" y="62" width="36" height="4" rx="2" fill="#FFFFFF" opacity="0.95"/>
+</svg>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSelector } from '@/store/hooks';
 
 export default function RecipesScreen() {
@@ -11,10 +12,11 @@ export default function RecipesScreen() {
   const fontSizeValue = fontSize === 'small' ? 14 : fontSize === 'large' ? 20 : 16;
 
   return (
-    <View style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]}>
-      <Text style={[styles.title, { fontSize: fontSizeValue + 8, color: themeColor }]}>
-        Recipes
-      </Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]} edges={['top']}>
+      <View style={styles.content}>
+        <Text style={[styles.title, { fontSize: fontSizeValue + 8, color: themeColor }]}>
+          Recipes
+        </Text>
       {recipes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { fontSize: fontSizeValue, color: darkMode ? '#999' : '#666' }]}>
@@ -50,12 +52,16 @@ export default function RecipesScreen() {
           )}
         />
       )}
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
     padding: 20,
   },

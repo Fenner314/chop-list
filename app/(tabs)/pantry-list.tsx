@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppSelector } from '@/store/hooks';
 
 export default function PantryListScreen() {
@@ -16,10 +17,11 @@ export default function PantryListScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]}>
-      <Text style={[styles.title, { fontSize: fontSizeValue + 8, color: themeColor }]}>
-        Pantry List
-      </Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]} edges={['top']}>
+      <View style={styles.content}>
+        <Text style={[styles.title, { fontSize: fontSizeValue + 8, color: themeColor }]}>
+          Pantry List
+        </Text>
       {items.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={[styles.emptyText, { fontSize: fontSizeValue, color: darkMode ? '#999' : '#666' }]}>
@@ -62,12 +64,16 @@ export default function PantryListScreen() {
           )}
         />
       )}
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  content: {
     flex: 1,
     padding: 20,
   },
