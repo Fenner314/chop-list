@@ -89,13 +89,34 @@ export default function PantryListScreen() {
     dispatch(initializeCategories());
   }, [dispatch]);
 
-  // Auto-expand all categories on mount
+  // Auto-expand categories that have items
   useEffect(() => {
-    const categoryIds = categories
-      .filter(cat => items.some(item => item.category === cat.id))
-      .map(cat => cat.id);
-    setExpandedCategories(new Set(categoryIds));
-  }, [categories.length, items.length > 0]);
+    const categoriesWithItems = new Set(
+      categories
+        .filter(cat => items.some(item => item.category === cat.id))
+        .map(cat => cat.id)
+    );
+
+    setExpandedCategories(prev => {
+      const newExpanded = new Set(prev);
+
+      // Add any new categories that now have items
+      categoriesWithItems.forEach(catId => {
+        if (!prev.has(catId)) {
+          newExpanded.add(catId);
+        }
+      });
+
+      // Remove categories that no longer have items
+      prev.forEach(catId => {
+        if (!categoriesWithItems.has(catId)) {
+          newExpanded.delete(catId);
+        }
+      });
+
+      return newExpanded;
+    });
+  }, [categories, items]);
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories);
