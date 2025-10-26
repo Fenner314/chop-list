@@ -14,6 +14,7 @@ import {
   initializeCategories,
   updateCategory,
 } from "@/store/slices/settingsSlice";
+import { addItemsFromPantry } from "@/store/slices/shoppingListSlice";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -268,6 +269,26 @@ export default function PantryListScreen() {
     const warningDays = 7;
     const warningTime = Date.now() + warningDays * 24 * 60 * 60 * 1000;
     return expirationDate <= warningTime && expirationDate > Date.now();
+  };
+
+  const handleMoveToShoppingList = () => {
+    const selectedItemsArray = items.filter(item => selectedItems.has(item.id));
+    const itemsToMove = selectedItemsArray.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      category: item.category,
+    }));
+
+    dispatch(addItemsFromPantry(itemsToMove));
+
+    Alert.alert(
+      'Added to Shopping List',
+      `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} added to shopping list`,
+      [{ text: 'OK' }]
+    );
+
+    setSelectedItems(new Set());
+    setMultiSelectMode(false);
   };
 
   const handleDragEnd = useCallback(
@@ -621,14 +642,27 @@ export default function PantryListScreen() {
             />
           )}
 
-          {/* Floating Action Button */}
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: themeColor }]}
-            onPress={handleAddNew}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="plus" size={28} color="#fff" />
-          </TouchableOpacity>
+          {/* Floating Action Buttons */}
+          {!multiSelectMode ? (
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: themeColor }]}
+              onPress={handleAddNew}
+              activeOpacity={0.8}
+            >
+              <IconSymbol name="plus" size={28} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: themeColor }]}
+              onPress={handleMoveToShoppingList}
+              activeOpacity={0.8}
+            >
+              <IconSymbol name="cart" size={24} color="#fff" />
+              <ChopText size="xs" weight="bold" color="#fff" style={{ marginTop: 2 }}>
+                Add to Shopping
+              </ChopText>
+            </TouchableOpacity>
+          )}
 
           <AddPantryItemModal
             visible={modalVisible}
@@ -825,8 +859,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 20,
     bottom: 20,
-    width: 60,
-    height: 60,
+    minWidth: 60,
+    minHeight: 60,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",

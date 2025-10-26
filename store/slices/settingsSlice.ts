@@ -22,6 +22,7 @@ export interface SettingsState {
     sortBy: 'manual' | 'alphabetical' | 'category';
     showCompleted: boolean;
     clearCompletedOnExit: boolean;
+    addAnotherItem: boolean;
   };
 
   // Pantry List Settings
@@ -80,6 +81,7 @@ const initialState: SettingsState = {
     sortBy: 'manual',
     showCompleted: true,
     clearCompletedOnExit: false,
+    addAnotherItem: true,
   },
   pantryListSettings: {
     sortBy: 'category',
