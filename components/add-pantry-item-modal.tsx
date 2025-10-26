@@ -4,6 +4,7 @@ import {
   PantryListItem,
   updateItem,
 } from "@/store/slices/pantryListSlice";
+import { updatePantryListSettings } from "@/store/slices/settingsSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
@@ -19,6 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
+import { IconSymbol } from "./ui/icon-symbol";
 
 interface AddPantryItemModalProps {
   visible: boolean;
@@ -34,6 +36,10 @@ export function AddPantryItemModal({
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const categories = useAppSelector((state) => state.settings.categories || []);
+  const addAnotherItem = useAppSelector(
+    (state) => state.settings.pantryListSettings.addAnotherItem
+  );
+  const themeColor = useAppSelector((state) => state.settings.themeColor);
 
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -89,6 +95,7 @@ export function AddPantryItemModal({
           expirationDate: expirationTimestamp,
         })
       );
+      onClose();
     } else {
       dispatch(
         addItem({
@@ -98,9 +105,23 @@ export function AddPantryItemModal({
           expirationDate: expirationTimestamp,
         })
       );
-    }
 
-    onClose();
+      // If "add another" is checked, clear fields and keep modal open
+      if (addAnotherItem) {
+        setName("");
+        setQuantity("");
+        setExpirationDate("");
+        setSuggestedCategories([]);
+        // Keep the category as "other" for next item
+        setSelectedCategory("other");
+      } else {
+        onClose();
+      }
+    }
+  };
+
+  const toggleAddAnotherItem = () => {
+    dispatch(updatePantryListSettings({ addAnotherItem: !addAnotherItem }));
   };
 
   const getCategoryName = (categoryId: string) => {
@@ -164,7 +185,7 @@ export function AddPantryItemModal({
 
           <View style={styles.inputGroup}>
             <ChopText size="small" variant="muted" style={styles.label}>
-              Quantity *
+              Quantity
             </ChopText>
             <TextInput
               style={[
@@ -252,6 +273,31 @@ export function AddPantryItemModal({
               </ChopText>
             )}
           </View>
+
+          {!editItem && (
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={toggleAddAnotherItem}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: darkMode ? "#666" : "#ccc",
+                    backgroundColor: addAnotherItem
+                      ? themeColor
+                      : "transparent",
+                  },
+                ]}
+              >
+                {addAnotherItem && (
+                  <IconSymbol name="checkmark" size={18} color="#fff" />
+                )}
+              </View>
+              <ChopText size="small">Add another item</ChopText>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -319,5 +365,20 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: "#f0f0f0",
     borderRadius: 8,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20,
+    paddingVertical: 12,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    marginRight: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
