@@ -72,6 +72,9 @@ export function AddPantryItemModal({
       setSelectedCategory(autoCategory);
       const suggestions = getSuggestedCategories(name);
       setSuggestedCategories(suggestions);
+    } else if (editItem) {
+      // Clear suggestions when editing
+      setSuggestedCategories([]);
     }
   }, [name, editItem]);
 
