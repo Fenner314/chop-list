@@ -429,6 +429,20 @@ export default function ShoppingListScreen() {
               />
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={styles.itemContent}
+            onPress={() => multiSelectMode ? handleItemPress(item) : handleEditItem(item)}
+            onLongPress={() => handleLongPress(item.id)}
+          >
+            <View style={styles.itemInfo}>
+              <ChopText size="medium" useGlobalFontSize style={styles.itemName}>
+                {item.name}
+              </ChopText>
+            </View>
+            <ChopText size="small" variant="muted">
+              {item.quantity}
+            </ChopText>
+          </TouchableOpacity>
           <View style={styles.dragHandleContainer}>
             <TouchableOpacity
               style={styles.dragHandle}
@@ -449,30 +463,6 @@ export default function ShoppingListScreen() {
               </View>
             )}
           </View>
-          <TouchableOpacity
-            style={styles.itemContent}
-            onPress={() => handleItemPress(item)}
-            onLongPress={() => handleLongPress(item.id)}
-          >
-            <ChopText size="medium" useGlobalFontSize style={styles.itemName}>
-              {item.name}
-            </ChopText>
-            <ChopText size="small" variant="muted">
-              {item.quantity}
-            </ChopText>
-          </TouchableOpacity>
-          {!multiSelectMode && (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => handleEditItem(item)}
-            >
-              <IconSymbol
-                name="pencil"
-                size={20}
-                color={darkMode ? '#666' : '#999'}
-              />
-            </TouchableOpacity>
-          )}
         </View>
       </ScaleDecorator>
     );
@@ -674,10 +664,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
-  editButton: {
-    padding: 16,
-    paddingLeft: 8,
-  },
   itemContent: {
     flex: 1,
     flexDirection: 'row',
@@ -685,6 +671,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     gap: 12,
+  },
+  itemInfo: {
+    flex: 1,
   },
   itemName: {
     flex: 1,

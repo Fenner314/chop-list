@@ -4,6 +4,7 @@ import {
   ShoppingListItem,
   updateItem,
 } from "@/store/slices/shoppingListSlice";
+import { updateItem as updatePantryItem } from "@/store/slices/pantryListSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
@@ -36,6 +37,7 @@ export function AddShoppingItemModal({
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const categories = useAppSelector((state) => state.settings.categories || []);
+  const pantryItems = useAppSelector((state) => state.pantryList.items);
   const addAnotherItem = useAppSelector((state) => state.settings.shoppingListSettings.addAnotherItem);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
 
@@ -75,14 +77,32 @@ export function AddShoppingItemModal({
     }
 
     if (editItem) {
-      dispatch(
-        updateItem({
-          ...editItem,
-          name: name.trim(),
-          quantity: quantity.trim() || "1",
-          category: selectedCategory,
-        })
+      const updatedItem = {
+        ...editItem,
+        name: name.trim(),
+        quantity: quantity.trim() || "1",
+        category: selectedCategory,
+      };
+
+      // Update in shopping list
+      dispatch(updateItem(updatedItem));
+
+      // If this item exists in pantry list (by matching old name), update it there too
+      const linkedPantryItem = pantryItems.find(
+        item => item.name.toLowerCase() === editItem.name.toLowerCase()
       );
+
+      if (linkedPantryItem) {
+        dispatch(
+          updatePantryItem({
+            ...linkedPantryItem,
+            name: name.trim(),
+            quantity: quantity.trim() || "1",
+            category: selectedCategory,
+          })
+        );
+      }
+
       onClose();
     } else {
       dispatch(

@@ -14,7 +14,7 @@ import {
   initializeCategories,
   updateCategory,
 } from "@/store/slices/settingsSlice";
-import { addItemsFromPantry } from "@/store/slices/shoppingListSlice";
+import { addItem as addShoppingItem } from "@/store/slices/shoppingListSlice";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -45,6 +45,7 @@ type ListItem =
 export default function PantryListScreen() {
   const dispatch = useAppDispatch();
   const items = useAppSelector((state) => state.pantryList.items);
+  const shoppingItems = useAppSelector((state) => state.shoppingList.items);
   const categories = useAppSelector((state) => state.settings.categories || []);
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
@@ -273,19 +274,46 @@ export default function PantryListScreen() {
 
   const handleMoveToShoppingList = () => {
     const selectedItemsArray = items.filter(item => selectedItems.has(item.id));
-    const itemsToMove = selectedItemsArray.map(item => ({
-      name: item.name,
-      quantity: item.quantity,
-      category: item.category,
-    }));
 
-    dispatch(addItemsFromPantry(itemsToMove));
+    // Check which items are already in shopping list (case-insensitive name comparison)
+    const itemsToAdd = selectedItemsArray.filter(pantryItem => {
+      return !shoppingItems.some(shopItem =>
+        shopItem.name.toLowerCase() === pantryItem.name.toLowerCase()
+      );
+    });
 
-    Alert.alert(
-      'Added to Shopping List',
-      `${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''} added to shopping list`,
-      [{ text: 'OK' }]
-    );
+    const duplicateCount = selectedItems.size - itemsToAdd.length;
+
+    // Add only items that aren't already in shopping list
+    itemsToAdd.forEach(item => {
+      dispatch(addShoppingItem({
+        name: item.name,
+        quantity: item.quantity,
+        category: item.category,
+        completed: false,
+      }));
+    });
+
+    // Show appropriate message
+    if (itemsToAdd.length > 0 && duplicateCount > 0) {
+      Alert.alert(
+        'Added to Shopping List',
+        `${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} added. ${duplicateCount} item${duplicateCount > 1 ? 's were' : ' was'} already in shopping list.`,
+        [{ text: 'OK' }]
+      );
+    } else if (itemsToAdd.length > 0) {
+      Alert.alert(
+        'Added to Shopping List',
+        `${itemsToAdd.length} item${itemsToAdd.length > 1 ? 's' : ''} added to shopping list`,
+        [{ text: 'OK' }]
+      );
+    } else {
+      Alert.alert(
+        'Already in Shopping List',
+        `All selected items are already in your shopping list`,
+        [{ text: 'OK' }]
+      );
+    }
 
     setSelectedItems(new Set());
     setMultiSelectMode(false);
@@ -496,9 +524,14 @@ export default function PantryListScreen() {
             onLongPress={() => handleLongPress(item.id)}
           >
             <View style={styles.itemInfo}>
-              <ChopText size="medium" useGlobalFontSize style={styles.itemName}>
-                {item.name}
-              </ChopText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <ChopText size="medium" useGlobalFontSize style={styles.itemName}>
+                  {item.name}
+                </ChopText>
+                {shoppingItems.some(shopItem => shopItem.name.toLowerCase() === item.name.toLowerCase()) && (
+                  <IconSymbol name="cart.fill" size={14} color={themeColor} />
+                )}
+              </View>
               {item.expirationDate && (
                 <ChopText
                   size="xs"
@@ -657,7 +690,7 @@ export default function PantryListScreen() {
               onPress={handleMoveToShoppingList}
               activeOpacity={0.8}
             >
-              <IconSymbol name="cart" size={24} color="#fff" />
+              <IconSymbol name="cart.fill" size={24} color="#fff" />
               <ChopText size="xs" weight="bold" color="#fff" style={{ marginTop: 2 }}>
                 Add to Shopping
               </ChopText>

@@ -6,11 +6,12 @@ import settingsReducer from './slices/settingsSlice';
 import shoppingListReducer from './slices/shoppingListSlice';
 import pantryListReducer from './slices/pantryListSlice';
 import recipesReducer from './slices/recipesSlice';
+import itemsReducer from './slices/itemsSlice';
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['settings', 'shoppingList', 'pantryList', 'recipes'],
+  whitelist: ['settings', 'shoppingList', 'pantryList', 'recipes', 'items'],
 };
 
 const rootReducer = combineReducers({
@@ -18,6 +19,7 @@ const rootReducer = combineReducers({
   shoppingList: shoppingListReducer,
   pantryList: pantryListReducer,
   recipes: recipesReducer,
+  items: itemsReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
