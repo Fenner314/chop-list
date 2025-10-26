@@ -1,38 +1,70 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, Modal, FlatList, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
-import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { PantryListItem, removeItem, updateItemCategory, reorderItems } from '@/store/slices/pantryListSlice';
-import { initializeCategories, updateCategory, Category } from '@/store/slices/settingsSlice';
-import { ChopText } from '@/components/chop-text';
-import { AddPantryItemModal } from '@/components/add-pantry-item-modal';
-import { CategoryModal } from '@/components/category-modal';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AddPantryItemModal } from "@/components/add-pantry-item-modal";
+import { CategoryModal } from "@/components/category-modal";
+import { ChopText } from "@/components/chop-text";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  PantryListItem,
+  removeItem,
+  reorderItems,
+  updateItemCategory,
+} from "@/store/slices/pantryListSlice";
+import {
+  Category,
+  initializeCategories,
+  updateCategory,
+} from "@/store/slices/settingsSlice";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // Type for list items that includes both items and category headers
 type ListItem =
-  | { type: 'category'; categoryId: string; title: string; color: string; itemCount: number }
-  | { type: 'item'; item: PantryListItem; categoryId: string };
+  | {
+      type: "category";
+      categoryId: string;
+      title: string;
+      color: string;
+      itemCount: number;
+    }
+  | { type: "item"; item: PantryListItem; categoryId: string };
 
 export default function PantryListScreen() {
   const dispatch = useAppDispatch();
-  const items = useAppSelector(state => state.pantryList.items);
-  const categories = useAppSelector(state => state.settings.categories || []);
-  const darkMode = useAppSelector(state => state.settings.darkMode);
-  const themeColor = useAppSelector(state => state.settings.themeColor);
-  const sortBy = useAppSelector(state => state.settings.pantryListSettings.sortBy);
+  const items = useAppSelector((state) => state.pantryList.items);
+  const categories = useAppSelector((state) => state.settings.categories || []);
+  const darkMode = useAppSelector((state) => state.settings.darkMode);
+  const themeColor = useAppSelector((state) => state.settings.themeColor);
+  const sortBy = useAppSelector(
+    (state) => state.settings.pantryListSettings.sortBy
+  );
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editItem, setEditItem] = useState<PantryListItem | undefined>();
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set()
+  );
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [moveCategoryModalVisible, setMoveCategoryModalVisible] = useState(false);
+  const [moveCategoryModalVisible, setMoveCategoryModalVisible] =
+    useState(false);
   const [itemToMove, setItemToMove] = useState<PantryListItem | undefined>();
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | undefined>();
+  const [editingCategory, setEditingCategory] = useState<
+    Category | undefined
+  >();
   const [isDraggingMultiple, setIsDraggingMultiple] = useState(false);
 
   // Create flat list with category headers and items
@@ -42,26 +74,28 @@ export default function PantryListScreen() {
     // Sort items within each category
     const sortItems = (itemsList: PantryListItem[]) => {
       switch (sortBy) {
-        case 'alphabetical':
+        case "alphabetical":
           return [...itemsList].sort((a, b) => a.name.localeCompare(b.name));
-        case 'expiration':
+        case "expiration":
           return [...itemsList].sort((a, b) => {
             if (!a.expirationDate) return 1;
             if (!b.expirationDate) return -1;
             return a.expirationDate - b.expirationDate;
           });
-        case 'manual':
+        case "manual":
         default:
           return [...itemsList].sort((a, b) => (a.order || 0) - (b.order || 0));
       }
     };
 
-    categories.forEach(category => {
-      const categoryItems = items.filter(item => item.category === category.id);
+    categories.forEach((category) => {
+      const categoryItems = items.filter(
+        (item) => item.category === category.id
+      );
       if (categoryItems.length > 0) {
         // Add category header
         data.push({
-          type: 'category',
+          type: "category",
           categoryId: category.id,
           title: category.name,
           color: category.color,
@@ -70,9 +104,9 @@ export default function PantryListScreen() {
 
         // Add items if category is expanded
         if (expandedCategories.has(category.id)) {
-          sortItems(categoryItems).forEach(item => {
+          sortItems(categoryItems).forEach((item) => {
             data.push({
-              type: 'item',
+              type: "item",
               item,
               categoryId: category.id,
             });
@@ -93,22 +127,22 @@ export default function PantryListScreen() {
   useEffect(() => {
     const categoriesWithItems = new Set(
       categories
-        .filter(cat => items.some(item => item.category === cat.id))
-        .map(cat => cat.id)
+        .filter((cat) => items.some((item) => item.category === cat.id))
+        .map((cat) => cat.id)
     );
 
-    setExpandedCategories(prev => {
+    setExpandedCategories((prev) => {
       const newExpanded = new Set(prev);
 
       // Add any new categories that now have items
-      categoriesWithItems.forEach(catId => {
+      categoriesWithItems.forEach((catId) => {
         if (!prev.has(catId)) {
           newExpanded.add(catId);
         }
       });
 
       // Remove categories that no longer have items
-      prev.forEach(catId => {
+      prev.forEach((catId) => {
         if (!categoriesWithItems.has(catId)) {
           newExpanded.delete(catId);
         }
@@ -144,8 +178,10 @@ export default function PantryListScreen() {
     setSelectedItems(new Set([itemId]));
   };
 
-  const handleItemPress = (item: PantryListItem) => {
-    if (multiSelectMode) {
+  const handleItemPress = (item: PantryListItem, checked = false) => {
+    if (multiSelectMode || checked) {
+      if (checked) setMultiSelectMode(true);
+
       const newSelected = new Set(selectedItems);
       if (newSelected.has(item.id)) {
         newSelected.delete(item.id);
@@ -165,15 +201,17 @@ export default function PantryListScreen() {
 
   const handleDeleteSelected = () => {
     Alert.alert(
-      'Delete Items',
-      `Are you sure you want to delete ${selectedItems.size} item${selectedItems.size > 1 ? 's' : ''}?`,
+      "Delete Items",
+      `Are you sure you want to delete ${selectedItems.size} item${
+        selectedItems.size > 1 ? "s" : ""
+      }?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Delete',
-          style: 'destructive',
+          text: "Delete",
+          style: "destructive",
           onPress: () => {
-            selectedItems.forEach(itemId => dispatch(removeItem(itemId)));
+            selectedItems.forEach((itemId) => dispatch(removeItem(itemId)));
             setSelectedItems(new Set());
             setMultiSelectMode(false);
           },
@@ -194,21 +232,27 @@ export default function PantryListScreen() {
 
   const handleMoveToCategory = (newCategoryId: string) => {
     if (itemToMove) {
-      dispatch(updateItemCategory({ id: itemToMove.id, category: newCategoryId }));
+      dispatch(
+        updateItemCategory({ id: itemToMove.id, category: newCategoryId })
+      );
       setMoveCategoryModalVisible(false);
       setItemToMove(undefined);
     }
   };
 
   const handleEditCategory = (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
+    const category = categories.find((c) => c.id === categoryId);
     if (category) {
       setEditingCategory(category);
       setCategoryModalVisible(true);
     }
   };
 
-  const handleSaveCategory = (categoryData: { name: string; color: string; icon?: string }) => {
+  const handleSaveCategory = (categoryData: {
+    name: string;
+    color: string;
+    icon?: string;
+  }) => {
     if (editingCategory) {
       dispatch(updateCategory({ ...editingCategory, ...categoryData }));
     }
@@ -226,82 +270,108 @@ export default function PantryListScreen() {
     return expirationDate <= warningTime && expirationDate > Date.now();
   };
 
-  const handleDragEnd = useCallback(({ data, to }: { data: ListItem[]; to: number }) => {
-    setIsDraggingMultiple(false);
+  const handleDragEnd = useCallback(
+    ({ data, to }: { data: ListItem[]; to: number }) => {
+      setIsDraggingMultiple(false);
 
-    // Build the new item order from the dragged list
-    const newItemOrder: PantryListItem[] = [];
-    let currentCategory = '';
-    let draggedItemIndex = -1;
-    let targetCategory = '';
-    let draggedItem: PantryListItem | null = null;
+      // Build the new item order from the dragged list
+      const newItemOrder: PantryListItem[] = [];
+      let currentCategory = "";
+      let draggedItemIndex = -1;
+      let targetCategory = "";
+      let draggedItem: PantryListItem | null = null;
 
-    // Extract all items and find where the dragged item landed
-    data.forEach((listItem, index) => {
-      if (listItem.type === 'category') {
-        currentCategory = listItem.categoryId;
-      } else if (listItem.type === 'item') {
-        const item = listItem.item;
+      // Extract all items and find where the dragged item landed
+      data.forEach((listItem, index) => {
+        if (listItem.type === "category") {
+          currentCategory = listItem.categoryId;
+        } else if (listItem.type === "item") {
+          const item = listItem.item;
 
-        // Find the dragged item (the one that was moved from 'from' to 'to')
-        if (index === to && multiSelectMode && selectedItems.has(item.id)) {
-          draggedItemIndex = newItemOrder.length;
-          targetCategory = currentCategory;
-          draggedItem = item;
-        }
+          // Find the dragged item (the one that was moved from 'from' to 'to')
+          if (index === to && multiSelectMode && selectedItems.has(item.id)) {
+            draggedItemIndex = newItemOrder.length;
+            targetCategory = currentCategory;
+            draggedItem = item;
+          }
 
-        newItemOrder.push({ ...item, category: currentCategory || item.category });
-      }
-    });
-
-    // If multiple items selected and we dragged one of them, move all selected together
-    if (multiSelectMode && selectedItems.size > 1 && draggedItem && draggedItemIndex >= 0) {
-      // Get all selected items in their current order
-      const selectedArray = items.filter(i => selectedItems.has(i.id));
-
-      // Update all selected items to target category
-      selectedArray.forEach(item => {
-        if (item.category !== targetCategory) {
-          dispatch(updateItemCategory({ id: item.id, category: targetCategory }));
+          newItemOrder.push({
+            ...item,
+            category: currentCategory || item.category,
+          });
         }
       });
 
-      // Remove all selected items from new order
-      const withoutSelected = newItemOrder.filter(i => !selectedItems.has(i.id));
+      // If multiple items selected and we dragged one of them, move all selected together
+      if (
+        multiSelectMode &&
+        selectedItems.size > 1 &&
+        draggedItem &&
+        draggedItemIndex >= 0
+      ) {
+        // Get all selected items in their current order
+        const selectedArray = items.filter((i) => selectedItems.has(i.id));
 
-      // Find the position where we want to insert (adjust for removed items before this position)
-      let adjustedIndex = draggedItemIndex;
-      for (let i = 0; i < draggedItemIndex; i++) {
-        if (selectedItems.has(newItemOrder[i].id)) {
-          adjustedIndex--;
+        // Update all selected items to target category
+        selectedArray.forEach((item) => {
+          if (item.category !== targetCategory) {
+            dispatch(
+              updateItemCategory({ id: item.id, category: targetCategory })
+            );
+          }
+        });
+
+        // Remove all selected items from new order
+        const withoutSelected = newItemOrder.filter(
+          (i) => !selectedItems.has(i.id)
+        );
+
+        // Find the position where we want to insert (adjust for removed items before this position)
+        let adjustedIndex = draggedItemIndex;
+        for (let i = 0; i < draggedItemIndex; i++) {
+          if (selectedItems.has(newItemOrder[i].id)) {
+            adjustedIndex--;
+          }
         }
+
+        // Insert all selected items at target position with updated category
+        const movedSelected = selectedArray.map((i) => ({
+          ...i,
+          category: targetCategory,
+        }));
+        withoutSelected.splice(adjustedIndex, 0, ...movedSelected);
+
+        // Dispatch once
+        dispatch(reorderItems(withoutSelected));
+        return;
       }
 
-      // Insert all selected items at target position with updated category
-      const movedSelected = selectedArray.map(i => ({ ...i, category: targetCategory }));
-      withoutSelected.splice(adjustedIndex, 0, ...movedSelected);
+      // Single item drag - update categories if changed
+      newItemOrder.forEach((item) => {
+        const originalItem = items.find((i) => i.id === item.id);
+        if (originalItem && originalItem.category !== item.category) {
+          dispatch(
+            updateItemCategory({ id: item.id, category: item.category })
+          );
+        }
+      });
 
-      // Dispatch once
-      dispatch(reorderItems(withoutSelected));
-      return;
-    }
+      dispatch(reorderItems(newItemOrder));
+    },
+    [dispatch, items, multiSelectMode, selectedItems]
+  );
 
-    // Single item drag - update categories if changed
-    newItemOrder.forEach((item) => {
-      const originalItem = items.find(i => i.id === item.id);
-      if (originalItem && originalItem.category !== item.category) {
-        dispatch(updateItemCategory({ id: item.id, category: item.category }));
-      }
-    });
-
-    dispatch(reorderItems(newItemOrder));
-  }, [dispatch, items, multiSelectMode, selectedItems]);
-
-  const renderItem = ({ item: listItem, drag, isActive }: RenderItemParams<ListItem>) => {
-    if (listItem.type === 'category') {
+  const renderItem = ({
+    item: listItem,
+    drag,
+    isActive,
+  }: RenderItemParams<ListItem>) => {
+    if (listItem.type === "category") {
       const isExpanded = expandedCategories.has(listItem.categoryId);
       return (
-        <View style={[styles.categoryHeader, { backgroundColor: listItem.color }]}>
+        <View
+          style={[styles.categoryHeader, { backgroundColor: listItem.color }]}
+        >
           <TouchableOpacity
             style={styles.categoryHeaderMain}
             onPress={() => toggleCategory(listItem.categoryId)}
@@ -311,11 +381,12 @@ export default function PantryListScreen() {
                 {listItem.title}
               </ChopText>
               <ChopText size="small" color="#666">
-                {listItem.itemCount} {listItem.itemCount === 1 ? 'item' : 'items'}
+                {listItem.itemCount}{" "}
+                {listItem.itemCount === 1 ? "item" : "items"}
               </ChopText>
             </View>
             <ChopText size="large" color="#333">
-              {isExpanded ? '−' : '+'}
+              {isExpanded ? "−" : "+"}
             </ChopText>
           </TouchableOpacity>
           <TouchableOpacity
@@ -335,19 +406,38 @@ export default function PantryListScreen() {
     const isSelected = selectedItems.has(item.id);
 
     // When in multi-select mode and dragging, show selected items as semi-transparent
-    const itemOpacity = multiSelectMode && isSelected && selectedItems.size > 1 && isActive ? 0.3 : 1;
+    const itemOpacity =
+      multiSelectMode && isSelected && selectedItems.size > 1 && isActive
+        ? 0.3
+        : 1;
 
     return (
       <ScaleDecorator>
         <View
           style={[
             styles.itemContainer,
-            { borderBottomColor: darkMode ? '#333' : '#eee', opacity: itemOpacity },
-            isSelected && !isActive && { backgroundColor: darkMode ? '#1c3a4a' : '#e3f2fd' },
-            isActive && { backgroundColor: darkMode ? '#2c3e50' : '#bbdefb' },
+            {
+              borderBottomColor: darkMode ? "#333" : "#eee",
+              opacity: itemOpacity,
+            },
+            isSelected &&
+              !isActive && {
+                backgroundColor: darkMode ? "#1c3a4a" : "#e3f2fd",
+              },
+            isActive && { backgroundColor: darkMode ? "#2c3e50" : "#bbdefb" },
           ]}
         >
-          {multiSelectMode && (
+          <TouchableOpacity
+            style={styles.checkbox}
+            onPress={() => handleItemPress(item, true)}
+          >
+            <IconSymbol
+              name={isSelected ? "checkmark.circle" : "circle"}
+              size={24}
+              color={isSelected ? themeColor : darkMode ? "#666" : "#ccc"}
+            />
+          </TouchableOpacity>
+          {/* {multiSelectMode && (
             <TouchableOpacity
               style={styles.checkbox}
               onPress={() => handleItemPress(item)}
@@ -358,8 +448,8 @@ export default function PantryListScreen() {
                 color={isSelected ? themeColor : darkMode ? '#666' : '#ccc'}
               />
             </TouchableOpacity>
-          )}
-          <View style={styles.dragHandleContainer}>
+          )} */}
+          {/* <View style={styles.dragHandleContainer}>
             <TouchableOpacity
               style={styles.dragHandle}
               onLongPress={drag}
@@ -378,7 +468,7 @@ export default function PantryListScreen() {
                 </ChopText>
               </View>
             )}
-          </View>
+          </View> */}
           <TouchableOpacity
             style={styles.itemContent}
             onPress={() => handleItemPress(item)}
@@ -391,11 +481,15 @@ export default function PantryListScreen() {
               {item.expirationDate && (
                 <ChopText
                   size="xs"
-                  variant={expired ? 'error' : expiringSoon ? 'warning' : 'muted'}
+                  variant={
+                    expired ? "error" : expiringSoon ? "warning" : "muted"
+                  }
                 >
                   {expired
-                    ? 'Expired'
-                    : `Expires: ${new Date(item.expirationDate).toLocaleDateString()}`}
+                    ? "Expired"
+                    : `Expires: ${new Date(
+                        item.expirationDate
+                      ).toLocaleDateString()}`}
                 </ChopText>
               )}
             </View>
@@ -403,7 +497,35 @@ export default function PantryListScreen() {
               {item.quantity}
             </ChopText>
           </TouchableOpacity>
-          {!multiSelectMode && (
+          <View style={styles.dragHandleContainer}>
+            <TouchableOpacity
+              style={styles.dragHandle}
+              onLongPress={drag}
+              delayLongPress={0}
+            >
+              <IconSymbol
+                name="line.horizontal.3"
+                size={20}
+                color={darkMode ? "#666" : "#999"}
+              />
+            </TouchableOpacity>
+            {multiSelectMode &&
+              isSelected &&
+              selectedItems.size > 1 &&
+              !isActive && (
+                <View
+                  style={[
+                    styles.selectedBadge,
+                    { backgroundColor: themeColor },
+                  ]}
+                >
+                  <ChopText size="xs" weight="bold" color="#fff">
+                    {selectedItems.size}
+                  </ChopText>
+                </View>
+              )}
+          </View>
+          {/* {!multiSelectMode && (
             <TouchableOpacity
               style={styles.moveButton}
               onPress={() => handleMoveItem(item)}
@@ -414,7 +536,7 @@ export default function PantryListScreen() {
                 color={darkMode ? '#666' : '#999'}
               />
             </TouchableOpacity>
-          )}
+          )} */}
         </View>
       </ScaleDecorator>
     );
@@ -423,12 +545,20 @@ export default function PantryListScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView
-        style={[styles.container, { backgroundColor: darkMode ? '#000' : '#fff' }]}
-        edges={['top']}
+        style={[
+          styles.container,
+          { backgroundColor: darkMode ? "#000" : "#fff" },
+        ]}
+        edges={["top"]}
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <ChopText size="xxl" weight="bold" variant="theme" style={styles.title}>
+            <ChopText
+              size="xxl"
+              weight="bold"
+              variant="theme"
+              style={styles.title}
+            >
               Pantry List
             </ChopText>
             {multiSelectMode && (
@@ -448,7 +578,9 @@ export default function PantryListScreen() {
                     onPress={handleCancelMultiSelect}
                     style={styles.toolbarButton}
                   >
-                    <ChopText size="small" variant="theme">Cancel</ChopText>
+                    <ChopText size="small" variant="theme">
+                      Cancel
+                    </ChopText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -460,10 +592,18 @@ export default function PantryListScreen() {
               <ChopText size="medium" variant="muted" useGlobalFontSize>
                 No items in your pantry
               </ChopText>
-              <ChopText size="small" variant="muted" style={styles.emptySubtext}>
+              <ChopText
+                size="small"
+                variant="muted"
+                style={styles.emptySubtext}
+              >
                 Tap the + button to add items
               </ChopText>
-              <ChopText size="xs" variant="muted" style={{ marginTop: 16, textAlign: 'center' }}>
+              <ChopText
+                size="xs"
+                variant="muted"
+                style={{ marginTop: 16, textAlign: "center" }}
+              >
                 Items will be automatically organized into categories!
               </ChopText>
             </View>
@@ -472,7 +612,9 @@ export default function PantryListScreen() {
               data={flatListData}
               onDragEnd={handleDragEnd}
               keyExtractor={(item, index) =>
-                item.type === 'category' ? `cat-${item.categoryId}` : `item-${item.item.id}`
+                item.type === "category"
+                  ? `cat-${item.categoryId}`
+                  : `item-${item.item.id}`
               }
               renderItem={renderItem}
               containerStyle={styles.list}
@@ -505,13 +647,22 @@ export default function PantryListScreen() {
             onRequestClose={() => setMoveCategoryModalVisible(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.moveCategoryModal, { backgroundColor: darkMode ? '#1c1c1e' : '#fff' }]}>
+              <View
+                style={[
+                  styles.moveCategoryModal,
+                  { backgroundColor: darkMode ? "#1c1c1e" : "#fff" },
+                ]}
+              >
                 <View style={styles.modalHeader}>
                   <ChopText size="xl" weight="bold">
                     Move to Category
                   </ChopText>
-                  <TouchableOpacity onPress={() => setMoveCategoryModalVisible(false)}>
-                    <ChopText size="large" variant="muted">✕</ChopText>
+                  <TouchableOpacity
+                    onPress={() => setMoveCategoryModalVisible(false)}
+                  >
+                    <ChopText size="large" variant="muted">
+                      ✕
+                    </ChopText>
                   </TouchableOpacity>
                 </View>
 
@@ -523,7 +674,8 @@ export default function PantryListScreen() {
                       style={[
                         styles.categoryOption,
                         { backgroundColor: category.color },
-                        itemToMove?.category === category.id && styles.currentCategory,
+                        itemToMove?.category === category.id &&
+                          styles.currentCategory,
                       ]}
                       onPress={() => handleMoveToCategory(category.id)}
                     >
@@ -531,7 +683,9 @@ export default function PantryListScreen() {
                         {category.name}
                       </ChopText>
                       {itemToMove?.category === category.id && (
-                        <ChopText size="small" color="#666">(Current)</ChopText>
+                        <ChopText size="small" color="#666">
+                          (Current)
+                        </ChopText>
                       )}
                     </TouchableOpacity>
                   )}
@@ -571,23 +725,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   multiSelectToolbar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 8,
   },
   toolbarActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   toolbarButton: {
     padding: 8,
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptySubtext: {
     marginTop: 8,
@@ -596,16 +750,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 4,
     borderRadius: 8,
   },
   categoryHeaderMain: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 12,
   },
   categoryHeaderContent: {
@@ -615,9 +769,9 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "transparent",
     borderBottomWidth: 1,
   },
   checkbox: {
@@ -625,7 +779,7 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   dragHandleContainer: {
-    position: 'relative',
+    position: "relative",
   },
   dragHandle: {
     padding: 16,
@@ -634,19 +788,19 @@ const styles = StyleSheet.create({
   dragHandlePlaceholder: {
     padding: 16,
     paddingRight: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     minWidth: 50,
   },
   selectedBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 4,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 4,
   },
   moveButton: {
@@ -655,9 +809,9 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     gap: 12,
   },
@@ -668,16 +822,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
     bottom: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -687,33 +841,33 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   moveCategoryModal: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '70%',
+    maxHeight: "70%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   categoryOption: {
     padding: 16,
     marginHorizontal: 20,
     marginVertical: 6,
     borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   currentCategory: {
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: "#666",
   },
 });
