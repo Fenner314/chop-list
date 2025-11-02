@@ -4,7 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { ShoppingListItem, removeItem, updateItemCategory, reorderItems, toggleItemCompleted, clearCompleted, uncheckAll } from '@/store/slices/shoppingListSlice';
+import {
+  Item,
+  removeItemFromList,
+  updateItemCategory as updateItemCategoryCentralized,
+  reorderShoppingItems,
+  toggleShoppingCompleted,
+  clearCompletedShopping,
+  uncheckAllShopping,
+} from '@/store/slices/itemsSlice';
+import { selectActiveShoppingItems, selectCompletedShoppingItems } from '@/store/selectors/itemsSelectors';
 import { initializeCategories } from '@/store/slices/settingsSlice';
 import { AnimatedCaret } from '@/components/animated-caret';
 import { ChopText } from '@/components/chop-text';
@@ -15,36 +24,33 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 // Type for list items that includes both items and category headers
 type ListItem =
   | { type: 'category'; categoryId: string; title: string; color: string; itemCount: number }
-  | { type: 'item'; item: ShoppingListItem; categoryId: string }
+  | { type: 'item'; item: Item; categoryId: string }
   | { type: 'completedHeader' }
-  | { type: 'completedItem'; item: ShoppingListItem };
+  | { type: 'completedItem'; item: Item };
 
 export default function ShoppingListScreen() {
   const dispatch = useAppDispatch();
-  const items = useAppSelector(state => state.shoppingList.items);
+  const activeItems = useAppSelector(selectActiveShoppingItems);
+  const completedItems = useAppSelector(selectCompletedShoppingItems);
   const categories = useAppSelector(state => state.settings.categories || []);
   const darkMode = useAppSelector(state => state.settings.darkMode);
   const themeColor = useAppSelector(state => state.settings.themeColor);
   const sortBy = useAppSelector(state => state.settings.shoppingListSettings.sortBy);
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [editItem, setEditItem] = useState<ShoppingListItem | undefined>();
+  const [editItem, setEditItem] = useState<Item | undefined>();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [completedExpanded, setCompletedExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Separate active and completed items
-  const activeItems = useMemo(() => items.filter(item => !item.completed), [items]);
-  const completedItems = useMemo(() => items.filter(item => item.completed), [items]);
-
   // Create flat list with category headers and items
   const flatListData = useMemo((): ListItem[] => {
     const data: ListItem[] = [];
 
     // Sort items within each category
-    const sortItems = (itemsList: ShoppingListItem[]) => {
+    const sortItems = (itemsList: Item[]) => {
       switch (sortBy) {
         case 'alphabetical':
           return [...itemsList].sort((a, b) => a.name.localeCompare(b.name));
@@ -53,11 +59,17 @@ export default function ShoppingListScreen() {
             if (a.category !== b.category) {
               return a.category.localeCompare(b.category);
             }
-            return (a.order || 0) - (b.order || 0);
+            const aOrder = a.lists.shopping?.order ?? 0;
+            const bOrder = b.lists.shopping?.order ?? 0;
+            return aOrder - bOrder;
           });
         case 'manual':
         default:
-          return [...itemsList].sort((a, b) => (a.order || 0) - (b.order || 0));
+          return [...itemsList].sort((a, b) => {
+            const aOrder = a.lists.shopping?.order ?? 0;
+            const bOrder = b.lists.shopping?.order ?? 0;
+            return aOrder - bOrder;
+          });
       }
     };
 
@@ -161,7 +173,7 @@ export default function ShoppingListScreen() {
     setExpandedCategories(newExpanded);
   };
 
-  const handleEditItem = (item: ShoppingListItem) => {
+  const handleEditItem = (item: Item) => {
     if (multiSelectMode) return;
     setEditItem(item);
     setModalVisible(true);
@@ -177,7 +189,7 @@ export default function ShoppingListScreen() {
     setSelectedItems(new Set([itemId]));
   };
 
-  const handleItemPress = (item: ShoppingListItem) => {
+  const handleItemPress = (item: Item) => {
     if (multiSelectMode) {
       const newSelected = new Set(selectedItems);
       if (newSelected.has(item.id)) {
@@ -193,7 +205,7 @@ export default function ShoppingListScreen() {
       }
     } else {
       // Toggle completed status
-      dispatch(toggleItemCompleted(item.id));
+      dispatch(toggleShoppingCompleted(item.id));
     }
   };
 
@@ -207,7 +219,9 @@ export default function ShoppingListScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            selectedItems.forEach(itemId => dispatch(removeItem(itemId)));
+            selectedItems.forEach(itemId =>
+              dispatch(removeItemFromList({ itemId, listType: 'shopping' }))
+            );
             setSelectedItems(new Set());
             setMultiSelectMode(false);
           },
@@ -235,23 +249,23 @@ export default function ShoppingListScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => dispatch(clearCompleted()),
+          onPress: () => dispatch(clearCompletedShopping()),
         },
       ]
     );
   };
 
   const handleUncheckAll = () => {
-    dispatch(uncheckAll());
+    dispatch(uncheckAllShopping());
   };
 
   const handleDragEnd = useCallback(({ data, to }: { data: ListItem[]; to: number }) => {
     // Build the new item order from the dragged list
-    const newItemOrder: ShoppingListItem[] = [];
+    const newItemOrder: Item[] = [];
     let currentCategory = '';
     let draggedItemIndex = -1;
     let targetCategory = '';
-    let draggedItem: ShoppingListItem | null = null;
+    let draggedItem: Item | null = null;
 
     // Extract all items and find where the dragged item landed
     data.forEach((listItem, index) => {
@@ -279,7 +293,7 @@ export default function ShoppingListScreen() {
       // Update all selected items to target category
       selectedArray.forEach(item => {
         if (item.category !== targetCategory) {
-          dispatch(updateItemCategory({ id: item.id, category: targetCategory }));
+          dispatch(updateItemCategoryCentralized({ itemId: item.id, category: targetCategory }));
         }
       });
 
@@ -298,9 +312,9 @@ export default function ShoppingListScreen() {
       const movedSelected = selectedArray.map(i => ({ ...i, category: targetCategory }));
       withoutSelected.splice(adjustedIndex, 0, ...movedSelected);
 
-      // Add back completed items
+      // Add back completed items and dispatch
       const allItems = [...withoutSelected, ...completedItems];
-      dispatch(reorderItems(allItems));
+      dispatch(reorderShoppingItems(allItems));
       return;
     }
 
@@ -308,13 +322,13 @@ export default function ShoppingListScreen() {
     newItemOrder.forEach((item) => {
       const originalItem = activeItems.find(i => i.id === item.id);
       if (originalItem && originalItem.category !== item.category) {
-        dispatch(updateItemCategory({ id: item.id, category: item.category }));
+        dispatch(updateItemCategoryCentralized({ itemId: item.id, category: item.category }));
       }
     });
 
-    // Add back completed items
+    // Add back completed items and dispatch
     const allItems = [...newItemOrder, ...completedItems];
-    dispatch(reorderItems(allItems));
+    dispatch(reorderShoppingItems(allItems));
   }, [dispatch, activeItems, completedItems, multiSelectMode, selectedItems]);
 
   const renderItem = ({ item: listItem, drag, isActive }: RenderItemParams<ListItem>) => {
@@ -387,7 +401,7 @@ export default function ShoppingListScreen() {
             styles.itemContainer,
             { borderBottomColor: darkMode ? '#333' : '#eee' },
           ]}
-          onPress={() => dispatch(toggleItemCompleted(item.id))}
+          onPress={() => dispatch(toggleShoppingCompleted(item.id))}
         >
           <View style={styles.checkbox}>
             <IconSymbol

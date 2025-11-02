@@ -1,11 +1,11 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  addItem,
-  PantryListItem,
+  Item,
+  addItemToList,
   updateItem,
-} from "@/store/slices/pantryListSlice";
+  updatePantryMetadata,
+} from "@/store/slices/itemsSlice";
 import { updatePantryListSettings } from "@/store/slices/settingsSlice";
-import { updateItem as updateShoppingItem } from "@/store/slices/shoppingListSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
@@ -26,7 +26,7 @@ import { IconSymbol } from "./ui/icon-symbol";
 interface AddPantryItemModalProps {
   visible: boolean;
   onClose: () => void;
-  editItem?: PantryListItem;
+  editItem?: Item;
 }
 
 export function AddPantryItemModal({
@@ -37,7 +37,6 @@ export function AddPantryItemModal({
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const categories = useAppSelector((state) => state.settings.categories || []);
-  const shoppingItems = useAppSelector((state) => state.shoppingList.items);
   const addAnotherItem = useAppSelector(
     (state) => state.settings.pantryListSettings.addAnotherItem
   );
@@ -55,8 +54,8 @@ export function AddPantryItemModal({
       setQuantity(editItem.quantity);
       setSelectedCategory(editItem.category);
       setExpirationDate(
-        editItem.expirationDate
-          ? new Date(editItem.expirationDate).toISOString().split("T")[0]
+        editItem.lists.pantry?.expirationDate
+          ? new Date(editItem.lists.pantry.expirationDate).toISOString().split("T")[0]
           : ""
       );
     } else {
@@ -91,37 +90,27 @@ export function AddPantryItemModal({
       : undefined;
 
     if (editItem) {
-      const updatedItem = {
-        ...editItem,
+      // Update core item properties (affects all lists)
+      dispatch(updateItem({
+        itemId: editItem.id,
         name: name.trim(),
         quantity: quantity.trim() || "1",
         category: selectedCategory,
-        expirationDate: expirationTimestamp,
-      };
+      }));
 
-      // Update in pantry list
-      dispatch(updateItem(updatedItem));
-
-      // If this item exists in shopping list (by matching old name), update it there too
-      const linkedShoppingItem = shoppingItems.find(
-        (item) => item.name.toLowerCase() === editItem.name.toLowerCase()
-      );
-
-      if (linkedShoppingItem) {
-        dispatch(
-          updateShoppingItem({
-            ...linkedShoppingItem,
-            name: name.trim(),
-            quantity: quantity.trim() || "1",
-            category: selectedCategory,
-          })
-        );
-      }
+      // Update pantry-specific metadata
+      dispatch(updatePantryMetadata({
+        itemId: editItem.id,
+        metadata: {
+          expirationDate: expirationTimestamp,
+        },
+      }));
 
       onClose();
     } else {
       dispatch(
-        addItem({
+        addItemToList({
+          listType: 'pantry',
           name: name.trim(),
           quantity: quantity.trim() || "1",
           category: selectedCategory,

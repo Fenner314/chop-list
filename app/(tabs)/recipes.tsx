@@ -8,8 +8,8 @@ import {
   RecipeIngredient,
   removeRecipe,
 } from "@/store/slices/recipesSlice";
-import { addItem as addShoppingItem } from "@/store/slices/shoppingListSlice";
-import { addItem as addPantryItem } from "@/store/slices/pantryListSlice";
+import { addItemToList } from "@/store/slices/itemsSlice";
+import { selectShoppingItems, selectPantryItems } from "@/store/selectors/itemsSelectors";
 import React, { useState } from "react";
 import {
   Alert,
@@ -23,8 +23,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function RecipesScreen() {
   const dispatch = useAppDispatch();
   const recipes = useAppSelector((state) => state.recipes.recipes);
-  const shoppingItems = useAppSelector((state) => state.shoppingList.items);
-  const pantryItems = useAppSelector((state) => state.pantryList.items);
+  const shoppingItems = useAppSelector(selectShoppingItems);
+  const pantryItems = useAppSelector(selectPantryItems);
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
 
@@ -167,7 +167,7 @@ export default function RecipesScreen() {
       }
     });
 
-    // Filter out duplicates already in pantry list
+    // Filter out duplicates already in pantry list (items already have pantry metadata)
     const itemsToAdd = ingredientsToAdd.filter((ingredient) => {
       return !pantryItems.some(
         (pantryItem) =>
@@ -180,7 +180,8 @@ export default function RecipesScreen() {
     // Add to pantry list
     itemsToAdd.forEach((ingredient) => {
       dispatch(
-        addPantryItem({
+        addItemToList({
+          listType: 'pantry',
           name: ingredient.name,
           quantity: ingredient.quantity,
           category: ingredient.category || "other",
@@ -232,7 +233,7 @@ export default function RecipesScreen() {
       }
     });
 
-    // Filter out duplicates already in shopping list
+    // Filter out duplicates already in shopping list (items already have shopping metadata)
     const itemsToAdd = ingredientsToAdd.filter((ingredient) => {
       return !shoppingItems.some(
         (shopItem) =>
@@ -245,11 +246,11 @@ export default function RecipesScreen() {
     // Add to shopping list
     itemsToAdd.forEach((ingredient) => {
       dispatch(
-        addShoppingItem({
+        addItemToList({
+          listType: 'shopping',
           name: ingredient.name,
           quantity: ingredient.quantity,
           category: ingredient.category || "other",
-          completed: false,
         })
       );
     });

@@ -8,11 +8,13 @@ import { SearchInput } from "@/components/search-input";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  PantryListItem,
-  removeItem,
-  reorderItems,
-  updateItemCategory,
-} from "@/store/slices/pantryListSlice";
+  Item,
+  removeItemFromList,
+  reorderPantryItems,
+  updateItemCategory as updateItemCategoryCentralized,
+  addItemToList,
+} from "@/store/slices/itemsSlice";
+import { selectPantryItems } from "@/store/selectors/itemsSelectors";
 import {
   addIngredientsToRecipe,
   Recipe,
@@ -22,7 +24,6 @@ import {
   initializeCategories,
   updateCategory,
 } from "@/store/slices/settingsSlice";
-import { addItem as addShoppingItem } from "@/store/slices/shoppingListSlice";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -48,12 +49,11 @@ type ListItem =
       color: string;
       itemCount: number;
     }
-  | { type: "item"; item: PantryListItem; categoryId: string };
+  | { type: "item"; item: Item; categoryId: string };
 
 export default function PantryListScreen() {
   const dispatch = useAppDispatch();
-  const items = useAppSelector((state) => state.pantryList.items);
-  const shoppingItems = useAppSelector((state) => state.shoppingList.items);
+  const items = useAppSelector(selectPantryItems);
   const categories = useAppSelector((state) => state.settings.categories || []);
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
@@ -62,7 +62,7 @@ export default function PantryListScreen() {
   );
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [editItem, setEditItem] = useState<PantryListItem | undefined>();
+  const [editItem, setEditItem] = useState<Item | undefined>();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set()
   );
@@ -70,7 +70,7 @@ export default function PantryListScreen() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [moveCategoryModalVisible, setMoveCategoryModalVisible] =
     useState(false);
-  const [itemToMove, setItemToMove] = useState<PantryListItem | undefined>();
+  const [itemToMove, setItemToMove] = useState<Item | undefined>();
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<
     Category | undefined
@@ -88,19 +88,25 @@ export default function PantryListScreen() {
     const data: ListItem[] = [];
 
     // Sort items within each category
-    const sortItems = (itemsList: PantryListItem[]) => {
+    const sortItems = (itemsList: Item[]) => {
       switch (sortBy) {
         case "alphabetical":
           return [...itemsList].sort((a, b) => a.name.localeCompare(b.name));
         case "expiration":
           return [...itemsList].sort((a, b) => {
-            if (!a.expirationDate) return 1;
-            if (!b.expirationDate) return -1;
-            return a.expirationDate - b.expirationDate;
+            const aExpiration = a.lists.pantry?.expirationDate;
+            const bExpiration = b.lists.pantry?.expirationDate;
+            if (!aExpiration) return 1;
+            if (!bExpiration) return -1;
+            return aExpiration - bExpiration;
           });
         case "manual":
         default:
-          return [...itemsList].sort((a, b) => (a.order || 0) - (b.order || 0));
+          return [...itemsList].sort((a, b) => {
+            const aOrder = a.lists.pantry?.order ?? 0;
+            const bOrder = b.lists.pantry?.order ?? 0;
+            return aOrder - bOrder;
+          });
       }
     };
 
@@ -185,7 +191,7 @@ export default function PantryListScreen() {
     setExpandedCategories(newExpanded);
   };
 
-  const handleEditItem = (item: PantryListItem) => {
+  const handleEditItem = (item: Item) => {
     if (multiSelectMode) return;
     setEditItem(item);
     setModalVisible(true);
@@ -201,7 +207,7 @@ export default function PantryListScreen() {
     setSelectedItems(new Set([itemId]));
   };
 
-  const handleItemPress = (item: PantryListItem, checked = false) => {
+  const handleItemPress = (item: Item, checked = false) => {
     if (multiSelectMode || checked) {
       if (checked) setMultiSelectMode(true);
 
@@ -234,7 +240,9 @@ export default function PantryListScreen() {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            selectedItems.forEach((itemId) => dispatch(removeItem(itemId)));
+            selectedItems.forEach((itemId) =>
+              dispatch(removeItemFromList({ itemId, listType: 'pantry' }))
+            );
             setSelectedItems(new Set());
             setMultiSelectMode(false);
           },
@@ -253,7 +261,7 @@ export default function PantryListScreen() {
     setSelectedItems(allItemIds);
   };
 
-  const handleMoveItem = (item: PantryListItem) => {
+  const handleMoveItem = (item: Item) => {
     setItemToMove(item);
     setMoveCategoryModalVisible(true);
   };
@@ -261,7 +269,7 @@ export default function PantryListScreen() {
   const handleMoveToCategory = (newCategoryId: string) => {
     if (itemToMove) {
       dispatch(
-        updateItemCategory({ id: itemToMove.id, category: newCategoryId })
+        updateItemCategoryCentralized({ itemId: itemToMove.id, category: newCategoryId })
       );
       setMoveCategoryModalVisible(false);
       setItemToMove(undefined);
@@ -301,22 +309,18 @@ export default function PantryListScreen() {
   const handleMoveToShoppingList = () => {
     const selectedItemsArray = items.filter(item => selectedItems.has(item.id));
 
-    // Check which items are already in shopping list (case-insensitive name comparison)
-    const itemsToAdd = selectedItemsArray.filter(pantryItem => {
-      return !shoppingItems.some(shopItem =>
-        shopItem.name.toLowerCase() === pantryItem.name.toLowerCase()
-      );
-    });
+    // Check which items are already in shopping list (have shopping metadata)
+    const itemsToAdd = selectedItemsArray.filter(item => !item.lists.shopping);
 
     const duplicateCount = selectedItems.size - itemsToAdd.length;
 
     // Add only items that aren't already in shopping list
     itemsToAdd.forEach(item => {
-      dispatch(addShoppingItem({
+      dispatch(addItemToList({
+        listType: 'shopping',
         name: item.name,
         quantity: item.quantity,
         category: item.category,
-        completed: false,
       }));
     });
 
@@ -401,11 +405,11 @@ export default function PantryListScreen() {
       setIsDraggingMultiple(false);
 
       // Build the new item order from the dragged list
-      const newItemOrder: PantryListItem[] = [];
+      const newItemOrder: Item[] = [];
       let currentCategory = "";
       let draggedItemIndex = -1;
       let targetCategory = "";
-      let draggedItem: PantryListItem | null = null;
+      let draggedItem: Item | null = null;
 
       // Extract all items and find where the dragged item landed
       data.forEach((listItem, index) => {
@@ -442,7 +446,7 @@ export default function PantryListScreen() {
         selectedArray.forEach((item) => {
           if (item.category !== targetCategory) {
             dispatch(
-              updateItemCategory({ id: item.id, category: targetCategory })
+              updateItemCategoryCentralized({ itemId: item.id, category: targetCategory })
             );
           }
         });
@@ -468,7 +472,7 @@ export default function PantryListScreen() {
         withoutSelected.splice(adjustedIndex, 0, ...movedSelected);
 
         // Dispatch once
-        dispatch(reorderItems(withoutSelected));
+        dispatch(reorderPantryItems(withoutSelected));
         return;
       }
 
@@ -477,12 +481,12 @@ export default function PantryListScreen() {
         const originalItem = items.find((i) => i.id === item.id);
         if (originalItem && originalItem.category !== item.category) {
           dispatch(
-            updateItemCategory({ id: item.id, category: item.category })
+            updateItemCategoryCentralized({ itemId: item.id, category: item.category })
           );
         }
       });
 
-      dispatch(reorderItems(newItemOrder));
+      dispatch(reorderPantryItems(newItemOrder));
     },
     [dispatch, items, multiSelectMode, selectedItems]
   );
@@ -525,8 +529,8 @@ export default function PantryListScreen() {
 
     // Item rendering
     const { item, categoryId } = listItem;
-    const expired = isExpired(item.expirationDate);
-    const expiringSoon = isExpiringSoon(item.expirationDate);
+    const expired = isExpired(item.lists.pantry?.expirationDate);
+    const expiringSoon = isExpiringSoon(item.lists.pantry?.expirationDate);
     const isSelected = selectedItems.has(item.id);
 
     // When in multi-select mode and dragging, show selected items as semi-transparent
@@ -603,11 +607,11 @@ export default function PantryListScreen() {
                 <ChopText size="medium" useGlobalFontSize style={styles.itemName}>
                   {item.name}
                 </ChopText>
-                {shoppingItems.some(shopItem => shopItem.name.toLowerCase() === item.name.toLowerCase()) && (
+                {item.lists.shopping && (
                   <IconSymbol name="cart.fill" size={14} color={themeColor} />
                 )}
               </View>
-              {item.expirationDate && (
+              {item.lists.pantry?.expirationDate && (
                 <ChopText
                   size="xs"
                   variant={
@@ -617,7 +621,7 @@ export default function PantryListScreen() {
                   {expired
                     ? "Expired"
                     : `Expires: ${new Date(
-                        item.expirationDate
+                        item.lists.pantry.expirationDate
                       ).toLocaleDateString()}`}
                 </ChopText>
               )}

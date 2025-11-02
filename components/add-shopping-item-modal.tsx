@@ -1,11 +1,11 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { updateItem as updatePantryItem } from "@/store/slices/pantryListSlice";
-import { updateShoppingListSettings } from "@/store/slices/settingsSlice";
 import {
-  addItem,
-  ShoppingListItem,
+  Item,
+  addItemToList,
   updateItem,
-} from "@/store/slices/shoppingListSlice";
+  updateShoppingMetadata,
+} from "@/store/slices/itemsSlice";
+import { updateShoppingListSettings } from "@/store/slices/settingsSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
@@ -26,7 +26,7 @@ import { IconSymbol } from "./ui/icon-symbol";
 interface AddShoppingItemModalProps {
   visible: boolean;
   onClose: () => void;
-  editItem?: ShoppingListItem;
+  editItem?: Item;
 }
 
 export function AddShoppingItemModal({
@@ -37,7 +37,6 @@ export function AddShoppingItemModal({
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const categories = useAppSelector((state) => state.settings.categories || []);
-  const pantryItems = useAppSelector((state) => state.pantryList.items);
   const addAnotherItem = useAppSelector(
     (state) => state.settings.shoppingListSettings.addAnotherItem
   );
@@ -79,40 +78,22 @@ export function AddShoppingItemModal({
     }
 
     if (editItem) {
-      const updatedItem = {
-        ...editItem,
+      // Update core item properties (affects all lists)
+      dispatch(updateItem({
+        itemId: editItem.id,
         name: name.trim(),
         quantity: quantity.trim() || "1",
         category: selectedCategory,
-      };
-
-      // Update in shopping list
-      dispatch(updateItem(updatedItem));
-
-      // If this item exists in pantry list (by matching old name), update it there too
-      const linkedPantryItem = pantryItems.find(
-        (item) => item.name.toLowerCase() === editItem.name.toLowerCase()
-      );
-
-      if (linkedPantryItem) {
-        dispatch(
-          updatePantryItem({
-            ...linkedPantryItem,
-            name: name.trim(),
-            quantity: quantity.trim() || "1",
-            category: selectedCategory,
-          })
-        );
-      }
+      }));
 
       onClose();
     } else {
       dispatch(
-        addItem({
+        addItemToList({
+          listType: 'shopping',
           name: name.trim(),
           quantity: quantity.trim() || "1",
           category: selectedCategory,
-          completed: false,
         })
       );
 
