@@ -9,7 +9,7 @@ import {
 } from "@/store/slices/recipesSlice";
 import { autoCategorizeItem } from "@/utils/categorization";
 import { ALL_UNITS, formatQuantityWithUnit } from "@/utils/unitConversion";
-import { Picker } from "@react-native-picker/picker";
+import RNPickerSelect from "react-native-picker-select";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -589,23 +589,29 @@ export function AddRecipeModal({
                       { backgroundColor: darkMode ? "#222" : "#f5f5f5" },
                     ]}
                   >
-                    <Picker
-                      selectedValue={newIngredientUnit}
+                    <RNPickerSelect
+                      value={newIngredientUnit}
                       onValueChange={setNewIngredientUnit}
-                      style={[
-                        styles.unitPicker,
-                        { color: darkMode ? "#fff" : "#000" },
+                      items={[
+                        { label: "(no unit)", value: "" },
+                        ...ALL_UNITS.map((unitOption) => ({
+                          label: unitOption.label,
+                          value: unitOption.value,
+                        })),
                       ]}
-                    >
-                      <Picker.Item label="(no unit)" value="" />
-                      {ALL_UNITS.map((unitOption) => (
-                        <Picker.Item
-                          key={unitOption.value}
-                          label={unitOption.label}
-                          value={unitOption.value}
-                        />
-                      ))}
-                    </Picker>
+                      style={{
+                        inputIOS: {
+                          ...styles.unitPicker,
+                          color: darkMode ? "#fff" : "#000",
+                        },
+                        inputAndroid: {
+                          ...styles.unitPicker,
+                          color: darkMode ? "#fff" : "#000",
+                        },
+                      }}
+                      placeholder={{}}
+                      useNativeAndroidPickerStyle={false}
+                    />
                   </View>
                   <TouchableOpacity
                     style={[styles.addButton, { backgroundColor: themeColor }]}

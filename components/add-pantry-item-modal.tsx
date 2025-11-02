@@ -11,6 +11,7 @@ import {
   getSuggestedCategories,
 } from "@/utils/categorization";
 import { ALL_UNITS } from "@/utils/unitConversion";
+import RNPickerSelect from "react-native-picker-select";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
@@ -20,7 +21,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
 import { IconSymbol } from "./ui/icon-symbol";
@@ -228,24 +228,29 @@ export function AddPantryItemModal({
                   { backgroundColor: darkMode ? "#222" : "#f5f5f5" },
                 ]}
               >
-                <Picker
-                  selectedValue={unit}
+                <RNPickerSelect
+                  value={unit}
                   onValueChange={setUnit}
-                  style={[
-                    styles.picker,
-                    { color: darkMode ? "#fff" : "#000" },
+                  items={[
+                    { label: "(no unit)", value: "" },
+                    ...ALL_UNITS.map((unitOption) => ({
+                      label: unitOption.label,
+                      value: unitOption.value,
+                    })),
                   ]}
-                  dropdownIconColor={darkMode ? "#fff" : "#000"}
-                >
-                  <Picker.Item label="(no unit)" value="" />
-                  {ALL_UNITS.map((unitOption) => (
-                    <Picker.Item
-                      key={unitOption.value}
-                      label={unitOption.label}
-                      value={unitOption.value}
-                    />
-                  ))}
-                </Picker>
+                  style={{
+                    inputIOS: {
+                      ...styles.picker,
+                      color: darkMode ? "#fff" : "#000",
+                    },
+                    inputAndroid: {
+                      ...styles.picker,
+                      color: darkMode ? "#fff" : "#000",
+                    },
+                  }}
+                  placeholder={{}}
+                  useNativeAndroidPickerStyle={false}
+                />
               </View>
             </View>
           </View>

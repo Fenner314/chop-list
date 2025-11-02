@@ -62,6 +62,7 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
       animationType="slide"
       transparent={true}
       onRequestClose={onClose}
+      presentationStyle="pageSheet"
     >
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: darkMode ? '#1c1c1e' : '#fff' }]}>

@@ -52,6 +52,7 @@ export function RecipeSelectorModal({
       animationType="slide"
       transparent={false}
       onRequestClose={onClose}
+      presentationStyle="pageSheet"
     >
       <SafeAreaView
         style={[
