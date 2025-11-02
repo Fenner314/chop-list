@@ -1,24 +1,24 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectPantryItems } from "@/store/selectors/itemsSelectors";
+import { subtractRecipeFromPantry } from "@/store/slices/itemsSlice";
 import {
   addRecipe,
   Recipe,
   RecipeIngredient,
   updateRecipe,
 } from "@/store/slices/recipesSlice";
-import { subtractRecipeFromPantry } from "@/store/slices/itemsSlice";
-import { selectPantryItems } from "@/store/selectors/itemsSelectors";
-import {
-  autoCategorizeItem,
-} from "@/utils/categorization";
+import { autoCategorizeItem } from "@/utils/categorization";
+import { ALL_UNITS, formatQuantityWithUnit } from "@/utils/unitConversion";
+import { Picker } from "@react-native-picker/picker";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
@@ -28,7 +28,11 @@ interface AddRecipeModalProps {
   visible: boolean;
   onClose: () => void;
   editRecipe?: Recipe;
-  preselectedIngredients?: Array<{ name: string; quantity: string; category: string }>;
+  preselectedIngredients?: Array<{
+    name: string;
+    quantity: string;
+    category: string;
+  }>;
 }
 
 export function AddRecipeModal({
@@ -46,12 +50,29 @@ export function AddRecipeModal({
   const [description, setDescription] = useState("");
   const [servings, setServings] = useState("4");
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
-  const [showPantrySelector, setShowPantrySelector] = useState(false);
-  const [selectedPantryItems, setSelectedPantryItems] = useState<Set<string>>(new Set());
 
   // New ingredient form
   const [newIngredientName, setNewIngredientName] = useState("");
   const [newIngredientQuantity, setNewIngredientQuantity] = useState("");
+  const [newIngredientUnit, setNewIngredientUnit] = useState<string>("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Edit ingredient
+  const [editingIngredient, setEditingIngredient] =
+    useState<RecipeIngredient | null>(null);
+
+  // Filter pantry items for suggestions
+  const suggestedItems = newIngredientName.trim()
+    ? pantryItems
+        .filter(
+          (item) =>
+            item.name.toLowerCase().includes(newIngredientName.toLowerCase()) &&
+            !ingredients.some(
+              (ing) => ing.name.toLowerCase() === item.name.toLowerCase()
+            )
+        )
+        .slice(0, 5)
+    : [];
 
   useEffect(() => {
     if (editRecipe) {
@@ -66,21 +87,24 @@ export function AddRecipeModal({
 
       // If preselected ingredients are provided, add them
       if (preselectedIngredients && preselectedIngredients.length > 0) {
-        const preselected: RecipeIngredient[] = preselectedIngredients.map(item => ({
-          id: `${Date.now()}-${Math.random()}`,
-          name: item.name,
-          quantity: item.quantity,
-          category: item.category,
-        }));
+        const preselected: RecipeIngredient[] = preselectedIngredients.map(
+          (item) => ({
+            id: `${Date.now()}-${Math.random()}`,
+            name: item.name,
+            quantity: item.quantity,
+            category: item.category,
+          })
+        );
         setIngredients(preselected);
       } else {
         setIngredients([]);
       }
     }
-    setShowPantrySelector(false);
-    setSelectedPantryItems(new Set());
     setNewIngredientName("");
     setNewIngredientQuantity("");
+    setNewIngredientUnit("");
+    setShowSuggestions(false);
+    setEditingIngredient(null);
   }, [editRecipe, visible, preselectedIngredients]);
 
   const handleSave = () => {
@@ -126,7 +150,11 @@ export function AddRecipeModal({
     // Check which ingredients are available in pantry
     const availableIngredients: RecipeIngredient[] = [];
     const missingIngredients: RecipeIngredient[] = [];
-    const insufficientIngredients: Array<{ ingredient: RecipeIngredient; available: number; needed: number }> = [];
+    const insufficientIngredients: Array<{
+      ingredient: RecipeIngredient;
+      available: number;
+      needed: number;
+    }> = [];
 
     editRecipe.ingredients.forEach((ingredient) => {
       const pantryItem = pantryItems.find(
@@ -156,18 +184,24 @@ export function AddRecipeModal({
       let message = "";
 
       if (missingIngredients.length > 0) {
-        message += `Missing from pantry:\n${missingIngredients.map((i) => `• ${i.name}`).join("\n")}`;
+        message += `Missing from pantry:\n${missingIngredients
+          .map((i) => `• ${i.name}`)
+          .join("\n")}`;
       }
 
       if (insufficientIngredients.length > 0) {
         if (message) message += "\n\n";
         message += `Insufficient quantity:\n${insufficientIngredients
-          .map((i) => `• ${i.ingredient.name}: have ${i.available}, need ${i.needed}`)
+          .map(
+            (i) =>
+              `• ${i.ingredient.name}: have ${i.available}, need ${i.needed}`
+          )
           .join("\n")}`;
       }
 
       if (availableIngredients.length > 0) {
-        message += "\n\nDo you want to subtract the available ingredients anyway?";
+        message +=
+          "\n\nDo you want to subtract the available ingredients anyway?";
       } else {
         message += "\n\nNo ingredients can be subtracted.";
         Alert.alert("Cannot Cook Recipe", message, [{ text: "OK" }]);
@@ -179,7 +213,9 @@ export function AddRecipeModal({
         {
           text: "Subtract Available",
           onPress: () => {
-            dispatch(subtractRecipeFromPantry({ ingredients: availableIngredients }));
+            dispatch(
+              subtractRecipeFromPantry({ ingredients: availableIngredients })
+            );
             Alert.alert(
               "Recipe Cooked",
               `Subtracted ${availableIngredients.length} ingredient${
@@ -201,7 +237,11 @@ export function AddRecipeModal({
           {
             text: "Cook",
             onPress: () => {
-              dispatch(subtractRecipeFromPantry({ ingredients: editRecipe.ingredients }));
+              dispatch(
+                subtractRecipeFromPantry({
+                  ingredients: editRecipe.ingredients,
+                })
+              );
               Alert.alert(
                 "Recipe Cooked!",
                 `All ingredients subtracted from pantry. Enjoy your ${editRecipe.name}!`,
@@ -220,47 +260,69 @@ export function AddRecipeModal({
       return;
     }
 
-    const category = autoCategorizeItem(newIngredientName);
+    if (editingIngredient) {
+      // Update existing ingredient
+      const updatedIngredients = ingredients.map((ing) =>
+        ing.id === editingIngredient.id
+          ? {
+              ...ing,
+              name: newIngredientName.trim(),
+              quantity: newIngredientQuantity.trim() || "1",
+              unit: newIngredientUnit || undefined,
+            }
+          : ing
+      );
+      setIngredients(updatedIngredients);
+      setEditingIngredient(null);
+    } else {
+      // Add new ingredient
+      const category = autoCategorizeItem(newIngredientName);
 
-    const newIngredient: RecipeIngredient = {
-      id: `${Date.now()}-${Math.random()}`,
-      name: newIngredientName.trim(),
-      quantity: newIngredientQuantity.trim() || "1",
-      category,
-    };
+      const newIngredient: RecipeIngredient = {
+        id: `${Date.now()}-${Math.random()}`,
+        name: newIngredientName.trim(),
+        quantity: newIngredientQuantity.trim() || "1",
+        unit: newIngredientUnit || undefined,
+        category,
+      };
 
-    setIngredients([...ingredients, newIngredient]);
+      setIngredients([...ingredients, newIngredient]);
+    }
+
     setNewIngredientName("");
     setNewIngredientQuantity("");
-  };
-
-  const handleAddFromPantry = () => {
-    const itemsToAdd = pantryItems
-      .filter(item => selectedPantryItems.has(item.id))
-      .map(item => ({
-        id: `${Date.now()}-${Math.random()}-${item.id}`,
-        name: item.name,
-        quantity: item.quantity,
-        category: item.category,
-      }));
-
-    setIngredients([...ingredients, ...itemsToAdd]);
-    setSelectedPantryItems(new Set());
-    setShowPantrySelector(false);
+    setNewIngredientUnit("");
   };
 
   const handleRemoveIngredient = (ingredientId: string) => {
-    setIngredients(ingredients.filter(ing => ing.id !== ingredientId));
+    setIngredients(ingredients.filter((ing) => ing.id !== ingredientId));
+    if (editingIngredient?.id === ingredientId) {
+      setEditingIngredient(null);
+      setNewIngredientName("");
+      setNewIngredientQuantity("");
+      setNewIngredientUnit("");
+    }
   };
 
-  const togglePantryItem = (itemId: string) => {
-    const newSelected = new Set(selectedPantryItems);
-    if (newSelected.has(itemId)) {
-      newSelected.delete(itemId);
-    } else {
-      newSelected.add(itemId);
-    }
-    setSelectedPantryItems(newSelected);
+  const handleEditIngredient = (ingredient: RecipeIngredient) => {
+    setEditingIngredient(ingredient);
+    setNewIngredientName(ingredient.name);
+    setNewIngredientQuantity(ingredient.quantity);
+    setNewIngredientUnit(ingredient.unit || "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingIngredient(null);
+    setNewIngredientName("");
+    setNewIngredientQuantity("");
+    setNewIngredientUnit("");
+  };
+
+  const handleSelectSuggestion = (item: any) => {
+    setNewIngredientName(item.name);
+    setNewIngredientQuantity(item.quantity);
+    setNewIngredientUnit(item.unit || "");
+    setShowSuggestions(false);
   };
 
   return (
@@ -295,7 +357,12 @@ export function AddRecipeModal({
 
         {/* Cook Recipe button - only show when editing existing recipe */}
         {editRecipe && (
-          <View style={[styles.cookRecipeContainer, { borderBottomColor: darkMode ? "#333" : "#eee" }]}>
+          <View
+            style={[
+              styles.cookRecipeContainer,
+              { borderBottomColor: darkMode ? "#333" : "#eee" },
+            ]}
+          >
             <TouchableOpacity
               style={[styles.cookRecipeButton, { backgroundColor: themeColor }]}
               onPress={handleCookRecipe}
@@ -395,37 +462,112 @@ export function AddRecipeModal({
                         {ingredient.name}
                       </ChopText>
                       <ChopText size="xs" variant="muted">
-                        {ingredient.quantity}
+                        {formatQuantityWithUnit(
+                          ingredient.quantity,
+                          ingredient.unit
+                        )}
                       </ChopText>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveIngredient(ingredient.id)}
-                    >
-                      <IconSymbol name="xmark.circle.fill" size={20} color="#ff3b30" />
-                    </TouchableOpacity>
+                    <View style={styles.ingredientActions}>
+                      <TouchableOpacity
+                        onPress={() => handleEditIngredient(ingredient)}
+                        style={{ marginRight: 12 }}
+                      >
+                        <IconSymbol
+                          name="pencil"
+                          size={18}
+                          color={themeColor}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleRemoveIngredient(ingredient.id)}
+                      >
+                        <IconSymbol
+                          name="xmark.circle.fill"
+                          size={20}
+                          color="#ff3b30"
+                        />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))}
               </View>
             )}
 
-            {/* Add ingredient section */}
-            {!showPantrySelector && (
-              <>
-                <View style={styles.addIngredientForm}>
-                  <TextInput
+            {/* Add/Edit ingredient section */}
+            <>
+              {editingIngredient && (
+                <View
+                  style={[
+                    styles.editingBanner,
+                    { backgroundColor: darkMode ? "#2a2a2a" : "#e8f4f8" },
+                  ]}
+                >
+                  <ChopText size="xs" variant="muted">
+                    Editing: {editingIngredient.name}
+                  </ChopText>
+                  <TouchableOpacity onPress={handleCancelEdit}>
+                    <ChopText size="xs" variant="theme">
+                      Cancel
+                    </ChopText>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View style={styles.addIngredientFormColumn}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                      color: darkMode ? "#fff" : "#000",
+                    },
+                  ]}
+                  value={newIngredientName}
+                  onChangeText={(text) => {
+                    setNewIngredientName(text);
+                    setShowSuggestions(text.trim().length > 0);
+                  }}
+                  placeholder="Ingredient name"
+                  placeholderTextColor={darkMode ? "#666" : "#999"}
+                />
+
+                {/* Pantry suggestions */}
+                {showSuggestions && suggestedItems.length > 0 && (
+                  <View
                     style={[
-                      styles.input,
-                      styles.ingredientNameInput,
-                      {
-                        backgroundColor: darkMode ? "#222" : "#f5f5f5",
-                        color: darkMode ? "#fff" : "#000",
-                      },
+                      styles.suggestionsContainer,
+                      { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
                     ]}
-                    value={newIngredientName}
-                    onChangeText={setNewIngredientName}
-                    placeholder="Ingredient name"
-                    placeholderTextColor={darkMode ? "#666" : "#999"}
-                  />
+                  >
+                    {suggestedItems.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[
+                          styles.suggestionItem,
+                          { borderBottomColor: darkMode ? "#333" : "#eee" },
+                        ]}
+                        onPress={() => handleSelectSuggestion(item)}
+                      >
+                        <View style={styles.suggestionInfo}>
+                          <ChopText size="small" weight="semibold">
+                            {item.name}
+                          </ChopText>
+                          <ChopText size="xs" variant="muted">
+                            {formatQuantityWithUnit(item.quantity, item.unit)}
+                          </ChopText>
+                        </View>
+                        <IconSymbol
+                          name="plus.circle"
+                          size={18}
+                          color={themeColor}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                <View style={styles.quantityUnitAddRow}>
                   <TextInput
                     style={[
                       styles.input,
@@ -437,80 +579,47 @@ export function AddRecipeModal({
                     ]}
                     value={newIngredientQuantity}
                     onChangeText={setNewIngredientQuantity}
-                    placeholder="Quantity"
+                    placeholder="Qty"
                     placeholderTextColor={darkMode ? "#666" : "#999"}
+                    keyboardType="decimal-pad"
                   />
+                  <View
+                    style={[
+                      styles.unitPickerContainer,
+                      { backgroundColor: darkMode ? "#222" : "#f5f5f5" },
+                    ]}
+                  >
+                    <Picker
+                      selectedValue={newIngredientUnit}
+                      onValueChange={setNewIngredientUnit}
+                      style={[
+                        styles.unitPicker,
+                        { color: darkMode ? "#fff" : "#000" },
+                      ]}
+                    >
+                      <Picker.Item label="(no unit)" value="" />
+                      {ALL_UNITS.map((unitOption) => (
+                        <Picker.Item
+                          key={unitOption.value}
+                          label={unitOption.label}
+                          value={unitOption.value}
+                        />
+                      ))}
+                    </Picker>
+                  </View>
                   <TouchableOpacity
                     style={[styles.addButton, { backgroundColor: themeColor }]}
                     onPress={handleAddManualIngredient}
                   >
-                    <IconSymbol name="plus" size={20} color="#fff" />
+                    <IconSymbol
+                      name={editingIngredient ? "checkmark" : "plus"}
+                      size={20}
+                      color="#fff"
+                    />
                   </TouchableOpacity>
                 </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.pantryButton,
-                    { backgroundColor: darkMode ? "#1a1a1a" : "#f5f5f5" },
-                  ]}
-                  onPress={() => setShowPantrySelector(true)}
-                >
-                  <IconSymbol name="list.bullet" size={18} color={themeColor} />
-                  <ChopText size="small" variant="theme">
-                    Select from Pantry
-                  </ChopText>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Pantry selector */}
-            {showPantrySelector && (
-              <View style={styles.pantrySelector}>
-                <View style={styles.pantrySelectorHeader}>
-                  <ChopText size="small" weight="semibold">
-                    Select from Pantry ({selectedPantryItems.size} selected)
-                  </ChopText>
-                  <TouchableOpacity onPress={() => setShowPantrySelector(false)}>
-                    <ChopText size="small" variant="theme">Cancel</ChopText>
-                  </TouchableOpacity>
-                </View>
-                <ScrollView style={styles.pantryItemsList} nestedScrollEnabled>
-                  {pantryItems.map((item) => {
-                    const isSelected = selectedPantryItems.has(item.id);
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={[
-                          styles.pantryItem,
-                          { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
-                          isSelected && { backgroundColor: darkMode ? '#1c3a4a' : '#e3f2fd' },
-                        ]}
-                        onPress={() => togglePantryItem(item.id)}
-                      >
-                        <IconSymbol
-                          name={isSelected ? 'checkmark.circle.fill' : 'circle'}
-                          size={20}
-                          color={isSelected ? themeColor : darkMode ? '#666' : '#ccc'}
-                        />
-                        <View style={styles.pantryItemInfo}>
-                          <ChopText size="small">{item.name}</ChopText>
-                          <ChopText size="xs" variant="muted">{item.quantity}</ChopText>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-                <TouchableOpacity
-                  style={[styles.addFromPantryButton, { backgroundColor: themeColor }]}
-                  onPress={handleAddFromPantry}
-                  disabled={selectedPantryItems.size === 0}
-                >
-                  <ChopText size="small" weight="semibold" color="#fff">
-                    Add {selectedPantryItems.size} Item{selectedPantryItems.size !== 1 ? 's' : ''}
-                  </ChopText>
-                </TouchableOpacity>
               </View>
-            )}
+            </>
           </View>
 
           <View style={styles.infoBox}>
@@ -611,42 +720,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  pantryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: 12,
+  addIngredientFormColumn: {
+    gap: 12,
+  },
+  suggestionsContainer: {
     borderRadius: 8,
+    overflow: "hidden",
   },
-  pantrySelector: {
-    marginTop: 12,
-  },
-  pantrySelectorHeader: {
+  suggestionItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-  },
-  pantryItemsList: {
-    maxHeight: 200,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  pantryItem: {
-    flexDirection: "row",
-    alignItems: "center",
     padding: 12,
-    gap: 12,
-    marginBottom: 4,
-    borderRadius: 8,
+    borderBottomWidth: 1,
   },
-  pantryItemInfo: {
+  suggestionInfo: {
     flex: 1,
   },
-  addFromPantryButton: {
-    padding: 14,
-    borderRadius: 8,
+  quantityUnitAddRow: {
+    flexDirection: "row",
+    gap: 8,
     alignItems: "center",
   },
   infoBox: {
@@ -654,5 +747,25 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: "#f0f0f0",
     borderRadius: 8,
+  },
+  ingredientActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  editingBanner: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  unitPickerContainer: {
+    flex: 2,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  unitPicker: {
+    height: 44,
   },
 });

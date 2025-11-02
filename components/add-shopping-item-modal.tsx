@@ -1,16 +1,12 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  Item,
-  addItemToList,
-  updateItem,
-  updateShoppingMetadata,
-} from "@/store/slices/itemsSlice";
+import { Item, addItemToList, updateItem } from "@/store/slices/itemsSlice";
 import { updateShoppingListSettings } from "@/store/slices/settingsSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
 } from "@/utils/categorization";
 import { ALL_UNITS } from "@/utils/unitConversion";
+import { Picker } from "@react-native-picker/picker";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
@@ -20,7 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
 import { IconSymbol } from "./ui/icon-symbol";
@@ -84,19 +79,21 @@ export function AddShoppingItemModal({
 
     if (editItem) {
       // Update core item properties (affects all lists)
-      dispatch(updateItem({
-        itemId: editItem.id,
-        name: name.trim(),
-        quantity: quantity.trim() || "1",
-        unit: unit || undefined,
-        category: selectedCategory,
-      }));
+      dispatch(
+        updateItem({
+          itemId: editItem.id,
+          name: name.trim(),
+          quantity: quantity.trim() || "1",
+          unit: unit || undefined,
+          category: selectedCategory,
+        })
+      );
 
       onClose();
     } else {
       dispatch(
         addItemToList({
-          listType: 'shopping',
+          listType: "shopping",
           name: name.trim(),
           quantity: quantity.trim() || "1",
           unit: unit || undefined,
@@ -201,10 +198,7 @@ export function AddShoppingItemModal({
                 <Picker
                   selectedValue={unit}
                   onValueChange={setUnit}
-                  style={[
-                    styles.picker,
-                    { color: darkMode ? "#fff" : "#000" },
-                  ]}
+                  style={[styles.picker, { color: darkMode ? "#fff" : "#000" }]}
                   dropdownIconColor={darkMode ? "#fff" : "#000"}
                 >
                   <Picker.Item label="(no unit)" value="" />

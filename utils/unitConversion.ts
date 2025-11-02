@@ -33,7 +33,7 @@ export const UNITS = {
 } as const;
 
 // Unit groups for the picker
-export const UNIT_GROUPS = [
+export const UNIT_GROUPS: Array<{ label: string; options: Array<{ value: string; label: string }> }> = [
   {
     label: 'Volume (Metric)',
     options: [
@@ -86,7 +86,7 @@ export const UNIT_GROUPS = [
 ];
 
 // Flat list of all units for quick selection
-export const ALL_UNITS = UNIT_GROUPS.flatMap(group => group.options) as Array<{ value: string; label: string }>;
+export const ALL_UNITS: Array<{ value: string; label: string }> = UNIT_GROUPS.flatMap(group => group.options);
 
 // Conversion factors to base units (teaspoon for volume, gram for weight)
 const VOLUME_CONVERSIONS: Record<string, number> = {

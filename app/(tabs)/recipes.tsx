@@ -10,6 +10,7 @@ import {
 } from "@/store/slices/recipesSlice";
 import { addItemToList } from "@/store/slices/itemsSlice";
 import { selectShoppingItems, selectPantryItems } from "@/store/selectors/itemsSelectors";
+import { formatQuantityWithUnit } from "@/utils/unitConversion";
 import React, { useState } from "react";
 import {
   Alert,
@@ -184,6 +185,7 @@ export default function RecipesScreen() {
           listType: 'pantry',
           name: ingredient.name,
           quantity: ingredient.quantity,
+          unit: ingredient.unit,
           category: ingredient.category || "other",
         })
       );
@@ -250,6 +252,7 @@ export default function RecipesScreen() {
           listType: 'shopping',
           name: ingredient.name,
           quantity: ingredient.quantity,
+          unit: ingredient.unit,
           category: ingredient.category || "other",
         })
       );
@@ -513,7 +516,7 @@ export default function RecipesScreen() {
                                 )}
                               </View>
                               <ChopText size="small" variant="muted">
-                                {ingredient.quantity}
+                                {formatQuantityWithUnit(ingredient.quantity, ingredient.unit)}
                               </ChopText>
                             </View>
                           </TouchableOpacity>
