@@ -1,5 +1,7 @@
 import { AddPantryItemModal } from "@/components/add-pantry-item-modal";
+import { AddRecipeModal } from "@/components/add-recipe-modal";
 import { CategoryModal } from "@/components/category-modal";
+import { RecipeSelectorModal } from "@/components/recipe-selector-modal";
 import { ChopText } from "@/components/chop-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -9,6 +11,10 @@ import {
   reorderItems,
   updateItemCategory,
 } from "@/store/slices/pantryListSlice";
+import {
+  addIngredientsToRecipe,
+  Recipe,
+} from "@/store/slices/recipesSlice";
 import {
   Category,
   initializeCategories,
@@ -68,6 +74,11 @@ export default function PantryListScreen() {
     Category | undefined
   >();
   const [isDraggingMultiple, setIsDraggingMultiple] = useState(false);
+  const [recipeSelectorVisible, setRecipeSelectorVisible] = useState(false);
+  const [addRecipeModalVisible, setAddRecipeModalVisible] = useState(false);
+  const [preselectedIngredients, setPreselectedIngredients] = useState<
+    Array<{ name: string; quantity: string; category: string }>
+  >([]);
 
   // Create flat list with category headers and items
   const flatListData = useMemo((): ListItem[] => {
@@ -315,6 +326,57 @@ export default function PantryListScreen() {
       );
     }
 
+    setSelectedItems(new Set());
+    setMultiSelectMode(false);
+  };
+
+  const handleAddToRecipe = () => {
+    const selectedItemsArray = items.filter(item => selectedItems.has(item.id));
+
+    // Store the selected items to add to recipe
+    setPreselectedIngredients(
+      selectedItemsArray.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        category: item.category,
+      }))
+    );
+
+    // Show recipe selector
+    setRecipeSelectorVisible(true);
+  };
+
+  const handleSelectRecipe = (recipe: Recipe) => {
+    // Add the selected pantry items as ingredients to the recipe
+    dispatch(
+      addIngredientsToRecipe({
+        recipeId: recipe.id,
+        ingredients: preselectedIngredients,
+      })
+    );
+
+    Alert.alert(
+      'Added to Recipe',
+      `${preselectedIngredients.length} item${preselectedIngredients.length > 1 ? 's' : ''} added to "${recipe.name}"`,
+      [{ text: 'OK' }]
+    );
+
+    // Clean up
+    setRecipeSelectorVisible(false);
+    setPreselectedIngredients([]);
+    setSelectedItems(new Set());
+    setMultiSelectMode(false);
+  };
+
+  const handleCreateNewRecipe = () => {
+    // Close recipe selector and open add recipe modal with preselected items
+    setRecipeSelectorVisible(false);
+    setAddRecipeModalVisible(true);
+  };
+
+  const handleCloseAddRecipeModal = () => {
+    setAddRecipeModalVisible(false);
+    setPreselectedIngredients([]);
     setSelectedItems(new Set());
     setMultiSelectMode(false);
   };
@@ -685,16 +747,31 @@ export default function PantryListScreen() {
               <IconSymbol name="plus" size={28} color="#fff" />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity
-              style={[styles.fab, { backgroundColor: themeColor }]}
-              onPress={handleMoveToShoppingList}
-              activeOpacity={0.8}
-            >
-              <IconSymbol name="cart.fill" size={24} color="#fff" />
-              <ChopText size="xs" weight="bold" color="#fff" style={{ marginTop: 2 }}>
-                Add to Shopping
-              </ChopText>
-            </TouchableOpacity>
+            <>
+              {/* Add to Recipe Button */}
+              <TouchableOpacity
+                style={[styles.fabSecondary, { backgroundColor: themeColor }]}
+                onPress={handleAddToRecipe}
+                activeOpacity={0.8}
+              >
+                <IconSymbol name="book.fill" size={24} color="#fff" />
+                <ChopText size="xs" weight="bold" color="#fff" style={{ marginTop: 2 }}>
+                  Add to Recipe
+                </ChopText>
+              </TouchableOpacity>
+
+              {/* Add to Shopping Button */}
+              <TouchableOpacity
+                style={[styles.fab, { backgroundColor: themeColor }]}
+                onPress={handleMoveToShoppingList}
+                activeOpacity={0.8}
+              >
+                <IconSymbol name="cart.fill" size={24} color="#fff" />
+                <ChopText size="xs" weight="bold" color="#fff" style={{ marginTop: 2 }}>
+                  Add to Shopping
+                </ChopText>
+              </TouchableOpacity>
+            </>
           )}
 
           <AddPantryItemModal
@@ -770,6 +847,24 @@ export default function PantryListScreen() {
             }}
             onSave={handleSaveCategory}
             editCategory={editingCategory}
+          />
+
+          {/* Recipe Selector Modal */}
+          <RecipeSelectorModal
+            visible={recipeSelectorVisible}
+            onClose={() => {
+              setRecipeSelectorVisible(false);
+              setPreselectedIngredients([]);
+            }}
+            onSelectRecipe={handleSelectRecipe}
+            onCreateNew={handleCreateNewRecipe}
+          />
+
+          {/* Add Recipe Modal with preselected ingredients */}
+          <AddRecipeModal
+            visible={addRecipeModalVisible}
+            onClose={handleCloseAddRecipeModal}
+            preselectedIngredients={preselectedIngredients}
           />
         </View>
       </SafeAreaView>
@@ -892,6 +987,26 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 20,
     bottom: 20,
+    minWidth: 60,
+    minHeight: 60,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  fabSecondary: {
+    position: "absolute",
+    right: 20,
+    bottom: 90,
     minWidth: 60,
     minHeight: 60,
     paddingHorizontal: 16,

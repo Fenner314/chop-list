@@ -69,6 +69,27 @@ const recipesSlice = createSlice({
         recipe.updatedAt = Date.now();
       }
     },
+    updateIngredient: (state, action: PayloadAction<{ recipeId: string; ingredientId: string; updates: Partial<RecipeIngredient> }>) => {
+      const recipe = state.recipes.find(r => r.id === action.payload.recipeId);
+      if (recipe) {
+        const ingredient = recipe.ingredients.find(ing => ing.id === action.payload.ingredientId);
+        if (ingredient) {
+          Object.assign(ingredient, action.payload.updates);
+          recipe.updatedAt = Date.now();
+        }
+      }
+    },
+    addIngredientsToRecipe: (state, action: PayloadAction<{ recipeId: string; ingredients: Array<Omit<RecipeIngredient, 'id'>> }>) => {
+      const recipe = state.recipes.find(r => r.id === action.payload.recipeId);
+      if (recipe) {
+        const newIngredients = action.payload.ingredients.map(ing => ({
+          ...ing,
+          id: `${Date.now()}-${Math.random()}`,
+        }));
+        recipe.ingredients.push(...newIngredients);
+        recipe.updatedAt = Date.now();
+      }
+    },
     clearAll: (state) => {
       state.recipes = [];
     },
@@ -81,6 +102,8 @@ export const {
   updateRecipe,
   addIngredientToRecipe,
   removeIngredientFromRecipe,
+  updateIngredient,
+  addIngredientsToRecipe,
   clearAll,
 } = recipesSlice.actions;
 
