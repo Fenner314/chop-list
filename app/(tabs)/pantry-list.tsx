@@ -239,6 +239,11 @@ export default function PantryListScreen() {
     setSelectedItems(new Set());
   };
 
+  const handleSelectAll = () => {
+    const allItemIds = new Set(items.map(item => item.id));
+    setSelectedItems(allItemIds);
+  };
+
   const handleMoveItem = (item: PantryListItem) => {
     setItemToMove(item);
     setMoveCategoryModalVisible(true);
@@ -682,6 +687,14 @@ export default function PantryListScreen() {
                   {selectedItems.size} selected
                 </ChopText>
                 <View style={styles.toolbarActions}>
+                  <TouchableOpacity
+                    onPress={handleSelectAll}
+                    style={styles.toolbarButton}
+                  >
+                    <ChopText size="small" variant="theme">
+                      Select All
+                    </ChopText>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleDeleteSelected}
                     style={styles.toolbarButton}

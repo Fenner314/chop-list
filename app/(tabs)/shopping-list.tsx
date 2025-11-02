@@ -206,6 +206,11 @@ export default function ShoppingListScreen() {
     setSelectedItems(new Set());
   };
 
+  const handleSelectAll = () => {
+    const allActiveItemIds = new Set(activeItems.map(item => item.id));
+    setSelectedItems(allActiveItemIds);
+  };
+
   const handleClearCompleted = () => {
     Alert.alert(
       'Delete All Completed',
@@ -482,6 +487,12 @@ export default function ShoppingListScreen() {
                   {selectedItems.size} selected
                 </ChopText>
                 <View style={styles.toolbarActions}>
+                  <TouchableOpacity
+                    onPress={handleSelectAll}
+                    style={styles.toolbarButton}
+                  >
+                    <ChopText size="small" variant="theme">Select All</ChopText>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleDeleteSelected}
                     style={styles.toolbarButton}

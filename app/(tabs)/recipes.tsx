@@ -119,6 +119,16 @@ export default function RecipesScreen() {
     setSelectedRecipes(new Set());
   };
 
+  const handleSelectAll = () => {
+    // Select all recipes and all ingredients
+    const allRecipeIds = new Set(recipes.map(recipe => recipe.id));
+    const allIngredientIds = new Set(
+      recipes.flatMap(recipe => recipe.ingredients.map(ing => ing.id))
+    );
+    setSelectedRecipes(allRecipeIds);
+    setSelectedIngredients(allIngredientIds);
+  };
+
   const handleAddToShopping = () => {
     const ingredientsToAdd: RecipeIngredient[] = [];
 
@@ -220,6 +230,14 @@ export default function RecipesScreen() {
                 {totalSelected} selected
               </ChopText>
               <View style={styles.toolbarActions}>
+                <TouchableOpacity
+                  onPress={handleSelectAll}
+                  style={styles.toolbarButton}
+                >
+                  <ChopText size="small" variant="theme">
+                    Select All
+                  </ChopText>
+                </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleCancelMultiSelect}
                   style={styles.toolbarButton}
