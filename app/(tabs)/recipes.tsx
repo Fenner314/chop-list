@@ -35,9 +35,6 @@ export default function RecipesScreen() {
   const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
     new Set()
   );
-  const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(
-    new Set()
-  );
 
   const toggleRecipe = (recipeId: string) => {
     const newExpanded = new Set(expandedRecipes);
@@ -76,8 +73,13 @@ export default function RecipesScreen() {
   };
 
   const handleLongPressRecipe = (recipeId: string) => {
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
+
     setMultiSelectMode(true);
-    setSelectedRecipes(new Set([recipeId]));
+    // Select all ingredients of this recipe when long-pressing
+    const recipeIngredientIds = recipe.ingredients.map((ing) => ing.id);
+    setSelectedIngredients(new Set(recipeIngredientIds));
   };
 
   const handleLongPressIngredient = (ingredientId: string) => {
@@ -86,15 +88,27 @@ export default function RecipesScreen() {
   };
 
   const handleToggleRecipe = (recipeId: string) => {
-    const newSelected = new Set(selectedRecipes);
-    if (newSelected.has(recipeId)) {
-      newSelected.delete(recipeId);
-    } else {
-      newSelected.add(recipeId);
-    }
-    setSelectedRecipes(newSelected);
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
 
-    if (newSelected.size === 0 && selectedIngredients.size === 0) {
+    const recipeIngredientIds = recipe.ingredients.map((ing) => ing.id);
+    const allSelected = recipeIngredientIds.every((id) =>
+      selectedIngredients.has(id)
+    );
+
+    const newSelectedIngredients = new Set(selectedIngredients);
+
+    if (allSelected) {
+      // Deselect all ingredients of this recipe
+      recipeIngredientIds.forEach((id) => newSelectedIngredients.delete(id));
+    } else {
+      // Select all ingredients of this recipe
+      recipeIngredientIds.forEach((id) => newSelectedIngredients.add(id));
+    }
+
+    setSelectedIngredients(newSelectedIngredients);
+
+    if (newSelectedIngredients.size === 0) {
       setMultiSelectMode(false);
     }
   };
@@ -108,39 +122,40 @@ export default function RecipesScreen() {
     }
     setSelectedIngredients(newSelected);
 
-    if (newSelected.size === 0 && selectedRecipes.size === 0) {
+    if (newSelected.size === 0) {
       setMultiSelectMode(false);
     }
+  };
+
+  // Helper function to get recipe checkbox state
+  const getRecipeCheckboxState = (recipe: Recipe): 'checked' | 'indeterminate' | 'unchecked' => {
+    const recipeIngredientIds = recipe.ingredients.map((ing) => ing.id);
+    const selectedCount = recipeIngredientIds.filter((id) =>
+      selectedIngredients.has(id)
+    ).length;
+
+    if (selectedCount === 0) return 'unchecked';
+    if (selectedCount === recipeIngredientIds.length) return 'checked';
+    return 'indeterminate';
   };
 
   const handleCancelMultiSelect = () => {
     setMultiSelectMode(false);
     setSelectedIngredients(new Set());
-    setSelectedRecipes(new Set());
   };
 
   const handleSelectAll = () => {
-    // Select all recipes and all ingredients
-    const allRecipeIds = new Set(recipes.map(recipe => recipe.id));
+    // Select all ingredients from all recipes
     const allIngredientIds = new Set(
       recipes.flatMap(recipe => recipe.ingredients.map(ing => ing.id))
     );
-    setSelectedRecipes(allRecipeIds);
     setSelectedIngredients(allIngredientIds);
   };
 
   const handleAddToShopping = () => {
     const ingredientsToAdd: RecipeIngredient[] = [];
 
-    // Add all ingredients from selected recipes
-    selectedRecipes.forEach((recipeId) => {
-      const recipe = recipes.find((r) => r.id === recipeId);
-      if (recipe) {
-        ingredientsToAdd.push(...recipe.ingredients);
-      }
-    });
-
-    // Add individually selected ingredients
+    // Add all selected ingredients
     selectedIngredients.forEach((ingredientId) => {
       const ingredient = recipes
         .flatMap((r) => r.ingredients)
@@ -201,10 +216,9 @@ export default function RecipesScreen() {
 
     setMultiSelectMode(false);
     setSelectedIngredients(new Set());
-    setSelectedRecipes(new Set());
   };
 
-  const totalSelected = selectedIngredients.size + selectedRecipes.size;
+  const totalSelected = selectedIngredients.size;
 
   return (
     <SafeAreaView
@@ -264,7 +278,8 @@ export default function RecipesScreen() {
           <ScrollView style={styles.list}>
             {recipes.map((recipe) => {
               const isExpanded = expandedRecipes.has(recipe.id);
-              const isRecipeSelected = selectedRecipes.has(recipe.id);
+              const checkboxState = getRecipeCheckboxState(recipe);
+              const isSelected = checkboxState === 'checked' || checkboxState === 'indeterminate';
 
               return (
                 <View key={recipe.id} style={styles.recipeContainer}>
@@ -272,7 +287,7 @@ export default function RecipesScreen() {
                     style={[
                       styles.recipeHeader,
                       { backgroundColor: darkMode ? "#1a1a1a" : "#f5f5f5" },
-                      isRecipeSelected && {
+                      isSelected && {
                         backgroundColor: darkMode ? "#1c3a4a" : "#e3f2fd",
                       },
                     ]}
@@ -289,11 +304,15 @@ export default function RecipesScreen() {
                         >
                           <IconSymbol
                             name={
-                              isRecipeSelected ? "checkmark.circle" : "circle"
+                              checkboxState === 'checked'
+                                ? "checkmark.circle.fill"
+                                : checkboxState === 'indeterminate'
+                                ? "minus.circle.fill"
+                                : "circle"
                             }
                             size={24}
                             color={
-                              isRecipeSelected
+                              isSelected
                                 ? themeColor
                                 : darkMode
                                 ? "#666"
