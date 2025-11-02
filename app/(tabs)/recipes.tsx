@@ -279,15 +279,14 @@ export default function RecipesScreen() {
                   >
                     <TouchableOpacity
                       style={styles.recipeHeaderMain}
-                      onPress={() =>
-                        multiSelectMode
-                          ? handleToggleRecipe(recipe.id)
-                          : toggleRecipe(recipe.id)
-                      }
+                      onPress={() => toggleRecipe(recipe.id)}
                       onLongPress={() => handleLongPressRecipe(recipe.id)}
                     >
                       {multiSelectMode && (
-                        <View style={styles.checkbox}>
+                        <TouchableOpacity
+                          style={styles.checkbox}
+                          onPress={() => handleToggleRecipe(recipe.id)}
+                        >
                           <IconSymbol
                             name={
                               isRecipeSelected ? "checkmark.circle" : "circle"
@@ -301,10 +300,10 @@ export default function RecipesScreen() {
                                 : "#ccc"
                             }
                           />
-                        </View>
+                        </TouchableOpacity>
                       )}
                       <View style={styles.recipeHeaderContent}>
-                        <ChopText size="large" weight="semibold">
+                        <ChopText size="large" weight="semibold" numberOfLines={1}>
                           {recipe.name}
                         </ChopText>
                         {recipe.description && (
@@ -312,6 +311,7 @@ export default function RecipesScreen() {
                             size="small"
                             variant="muted"
                             style={{ marginTop: 4 }}
+                            numberOfLines={2}
                           >
                             {recipe.description}
                           </ChopText>
@@ -326,30 +326,34 @@ export default function RecipesScreen() {
                           </ChopText>
                         </View>
                       </View>
-                      {!multiSelectMode && (
-                        <AnimatedCaret isExpanded={isExpanded} color={darkMode ? '#999' : '#666'} size={24} />
-                      )}
-                    </TouchableOpacity>
-                    {!multiSelectMode && (
-                      <View style={styles.recipeActions}>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleEditRecipe(recipe)}
-                        >
-                          <IconSymbol
-                            name="pencil"
-                            size={18}
-                            color={darkMode ? "#666" : "#999"}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleDeleteRecipe(recipe.id)}
-                        >
-                          <IconSymbol name="trash" size={18} color="#ff3b30" />
-                        </TouchableOpacity>
+                      <View style={styles.recipeActionsInline}>
+                        {!multiSelectMode && (
+                          <>
+                            <TouchableOpacity
+                              style={styles.actionButton}
+                              onPress={() => handleEditRecipe(recipe)}
+                            >
+                              <IconSymbol
+                                name="pencil"
+                                size={18}
+                                color={darkMode ? "#666" : "#999"}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.actionButton}
+                              onPress={() => handleDeleteRecipe(recipe.id)}
+                            >
+                              <IconSymbol name="trash" size={18} color="#ff3b30" />
+                            </TouchableOpacity>
+                          </>
+                        )}
+                        <AnimatedCaret
+                          isExpanded={isExpanded}
+                          color={darkMode ? "#999" : "#666"}
+                          size={20}
+                        />
                       </View>
-                    )}
+                    </TouchableOpacity>
                   </View>
 
                   {isExpanded && (
@@ -544,6 +548,11 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     gap: 12,
     justifyContent: "flex-end",
+  },
+  recipeActionsInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   actionButton: {
     padding: 8,
