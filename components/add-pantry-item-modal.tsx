@@ -4,8 +4,8 @@ import {
   PantryListItem,
   updateItem,
 } from "@/store/slices/pantryListSlice";
-import { updateItem as updateShoppingItem } from "@/store/slices/shoppingListSlice";
 import { updatePantryListSettings } from "@/store/slices/settingsSlice";
+import { updateItem as updateShoppingItem } from "@/store/slices/shoppingListSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
@@ -104,7 +104,7 @@ export function AddPantryItemModal({
 
       // If this item exists in shopping list (by matching old name), update it there too
       const linkedShoppingItem = shoppingItems.find(
-        item => item.name.toLowerCase() === editItem.name.toLowerCase()
+        (item) => item.name.toLowerCase() === editItem.name.toLowerCase()
       );
 
       if (linkedShoppingItem) {
@@ -238,9 +238,30 @@ export function AddPantryItemModal({
                 },
               ]}
               value={expirationDate}
-              onChangeText={setExpirationDate}
+              onChangeText={(text) => {
+                // Remove all non-digit characters
+                const cleaned = text.replace(/\D/g, "");
+
+                // Format as YYYY-MM-DD
+                let formatted = cleaned;
+                if (cleaned.length > 4) {
+                  formatted = cleaned.slice(0, 4) + "-" + cleaned.slice(4);
+                }
+                if (cleaned.length > 6) {
+                  formatted =
+                    cleaned.slice(0, 4) +
+                    "-" +
+                    cleaned.slice(4, 6) +
+                    "-" +
+                    cleaned.slice(6, 8);
+                }
+
+                setExpirationDate(formatted);
+              }}
               placeholder="YYYY-MM-DD"
               placeholderTextColor={darkMode ? "#666" : "#999"}
+              keyboardType="number-pad"
+              maxLength={10}
             />
           </View>
 
