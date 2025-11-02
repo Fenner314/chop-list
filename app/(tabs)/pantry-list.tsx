@@ -2,8 +2,8 @@ import { AddPantryItemModal } from "@/components/add-pantry-item-modal";
 import { AddRecipeModal } from "@/components/add-recipe-modal";
 import { AnimatedCaret } from "@/components/animated-caret";
 import { CategoryModal } from "@/components/category-modal";
-import { RecipeSelectorModal } from "@/components/recipe-selector-modal";
 import { ChopText } from "@/components/chop-text";
+import { RecipeSelectorModal } from "@/components/recipe-selector-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -502,13 +502,13 @@ export default function PantryListScreen() {
                 {listItem.itemCount === 1 ? "item" : "items"}
               </ChopText>
             </View>
+            <TouchableOpacity
+              style={styles.categoryEditButton}
+              onPress={() => handleEditCategory(listItem.categoryId)}
+            >
+              <IconSymbol name="pencil" size={18} color="#666" />
+            </TouchableOpacity>
             <AnimatedCaret isExpanded={isExpanded} color="#333" size={24} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.categoryEditButton}
-            onPress={() => handleEditCategory(listItem.categoryId)}
-          >
-            <IconSymbol name="pencil" size={18} color="#666" />
           </TouchableOpacity>
         </View>
       );
