@@ -307,7 +307,7 @@ export function AddPantryItemModal({
             </ScrollView>
           </View>
 
-          <View style={styles.infoBox}>
+          <View>
             <ChopText size="xs" variant="muted">
               * Required fields
             </ChopText>
@@ -403,12 +403,6 @@ const styles = StyleSheet.create({
     color: "#34C759",
     marginTop: 2,
     fontStyle: "italic",
-  },
-  infoBox: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
   },
   checkboxContainer: {
     flexDirection: "row",

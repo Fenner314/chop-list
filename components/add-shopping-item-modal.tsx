@@ -1,15 +1,15 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { updateItem as updatePantryItem } from "@/store/slices/pantryListSlice";
+import { updateShoppingListSettings } from "@/store/slices/settingsSlice";
 import {
   addItem,
   ShoppingListItem,
   updateItem,
 } from "@/store/slices/shoppingListSlice";
-import { updateItem as updatePantryItem } from "@/store/slices/pantryListSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
 } from "@/utils/categorization";
-import { updateShoppingListSettings } from "@/store/slices/settingsSlice";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
@@ -38,7 +38,9 @@ export function AddShoppingItemModal({
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const categories = useAppSelector((state) => state.settings.categories || []);
   const pantryItems = useAppSelector((state) => state.pantryList.items);
-  const addAnotherItem = useAppSelector((state) => state.settings.shoppingListSettings.addAnotherItem);
+  const addAnotherItem = useAppSelector(
+    (state) => state.settings.shoppingListSettings.addAnotherItem
+  );
   const themeColor = useAppSelector((state) => state.settings.themeColor);
 
   const [name, setName] = useState("");
@@ -89,7 +91,7 @@ export function AddShoppingItemModal({
 
       // If this item exists in pantry list (by matching old name), update it there too
       const linkedPantryItem = pantryItems.find(
-        item => item.name.toLowerCase() === editItem.name.toLowerCase()
+        (item) => item.name.toLowerCase() === editItem.name.toLowerCase()
       );
 
       if (linkedPantryItem) {
@@ -243,7 +245,7 @@ export function AddShoppingItemModal({
             </ScrollView>
           </View>
 
-          <View style={styles.infoBox}>
+          <View>
             <ChopText size="xs" variant="muted">
               * Required fields
             </ChopText>
@@ -339,12 +341,6 @@ const styles = StyleSheet.create({
     color: "#34C759",
     marginTop: 2,
     fontStyle: "italic",
-  },
-  infoBox: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
   },
   checkboxContainer: {
     flexDirection: "row",
