@@ -9,6 +9,7 @@ import { initializeCategories } from '@/store/slices/settingsSlice';
 import { AnimatedCaret } from '@/components/animated-caret';
 import { ChopText } from '@/components/chop-text';
 import { AddShoppingItemModal } from '@/components/add-shopping-item-modal';
+import { SearchInput } from '@/components/search-input';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 // Type for list items that includes both items and category headers
@@ -32,6 +33,7 @@ export default function ShoppingListScreen() {
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [completedExpanded, setCompletedExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Separate active and completed items
   const activeItems = useMemo(() => items.filter(item => !item.completed), [items]);
@@ -59,9 +61,22 @@ export default function ShoppingListScreen() {
       }
     };
 
+    // Filter items based on search query
+    const filteredActiveItems = searchQuery.trim()
+      ? activeItems.filter(item =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : activeItems;
+
+    const filteredCompletedItems = searchQuery.trim()
+      ? completedItems.filter(item =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : completedItems;
+
     // Add active items grouped by category
     categories.forEach(category => {
-      const categoryItems = activeItems.filter(item => item.category === category.id);
+      const categoryItems = filteredActiveItems.filter(item => item.category === category.id);
       if (categoryItems.length > 0) {
         // Add category header
         data.push({
@@ -86,11 +101,11 @@ export default function ShoppingListScreen() {
     });
 
     // Add completed items section at the bottom
-    if (completedItems.length > 0) {
+    if (filteredCompletedItems.length > 0) {
       data.push({ type: 'completedHeader' });
 
       if (completedExpanded) {
-        sortItems(completedItems).forEach(item => {
+        sortItems(filteredCompletedItems).forEach(item => {
           data.push({
             type: 'completedItem',
             item,
@@ -100,7 +115,7 @@ export default function ShoppingListScreen() {
     }
 
     return data;
-  }, [activeItems, completedItems, categories, sortBy, expandedCategories, completedExpanded]);
+  }, [activeItems, completedItems, categories, sortBy, expandedCategories, completedExpanded, searchQuery]);
 
   // Initialize categories if empty
   useEffect(() => {
@@ -481,6 +496,15 @@ export default function ShoppingListScreen() {
             <ChopText size="xxl" weight="bold" variant="theme" style={styles.title}>
               Shopping List
             </ChopText>
+
+            {/* Search Bar */}
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search items..."
+              darkMode={darkMode}
+            />
+
             {multiSelectMode && (
               <View style={styles.multiSelectToolbar}>
                 <ChopText size="small" variant="muted">

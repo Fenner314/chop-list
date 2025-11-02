@@ -4,6 +4,7 @@ import { AnimatedCaret } from "@/components/animated-caret";
 import { CategoryModal } from "@/components/category-modal";
 import { ChopText } from "@/components/chop-text";
 import { RecipeSelectorModal } from "@/components/recipe-selector-modal";
+import { SearchInput } from "@/components/search-input";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -80,6 +81,7 @@ export default function PantryListScreen() {
   const [preselectedIngredients, setPreselectedIngredients] = useState<
     Array<{ name: string; quantity: string; category: string }>
   >([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Create flat list with category headers and items
   const flatListData = useMemo((): ListItem[] => {
@@ -102,8 +104,15 @@ export default function PantryListScreen() {
       }
     };
 
+    // Filter items based on search query
+    const filteredItems = searchQuery.trim()
+      ? items.filter((item) =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : items;
+
     categories.forEach((category) => {
-      const categoryItems = items.filter(
+      const categoryItems = filteredItems.filter(
         (item) => item.category === category.id
       );
       if (categoryItems.length > 0) {
@@ -130,7 +139,7 @@ export default function PantryListScreen() {
     });
 
     return data;
-  }, [items, categories, sortBy, expandedCategories]);
+  }, [items, categories, sortBy, expandedCategories, searchQuery]);
 
   // Initialize categories if empty (migration from old persisted state)
   useEffect(() => {
@@ -681,6 +690,15 @@ export default function PantryListScreen() {
             >
               Pantry List
             </ChopText>
+
+            {/* Search Bar */}
+            <SearchInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search items..."
+              darkMode={darkMode}
+            />
+
             {multiSelectMode && (
               <View style={styles.multiSelectToolbar}>
                 <ChopText size="small" variant="muted">

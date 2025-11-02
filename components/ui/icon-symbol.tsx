@@ -22,12 +22,13 @@ const MAPPING = {
   "archivebox.fill": "inventory",
   "book.fill": "menu-book",
   "gearshape.fill": "settings",
-  "plus": "add",
-  "pencil": "edit",
-  "trash": "delete",
+  plus: "add",
+  pencil: "edit",
+  trash: "delete",
   "checkmark.circle": "check-circle",
-  "circle": "radio-button-unchecked",
+  circle: "radio-button-unchecked",
   "line.horizontal.3": "drag-handle",
+  "xmark.circle.fill": "cancel",
 } as IconMapping;
 
 /**
