@@ -556,6 +556,7 @@ export default function ShoppingListScreen() {
               }}
               renderItem={renderItem}
               containerStyle={styles.list}
+              contentContainerStyle={styles.listContent}
             />
           )}
 
@@ -620,6 +621,9 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  listContent: {
+    paddingBottom: 100,
   },
   categoryHeader: {
     flexDirection: 'row',

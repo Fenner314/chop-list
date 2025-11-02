@@ -342,7 +342,7 @@ export default function RecipesScreen() {
             </ChopText>
           </View>
         ) : (
-          <ScrollView style={styles.list}>
+          <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
             {recipes.map((recipe) => {
               const isExpanded = expandedRecipes.has(recipe.id);
               const checkboxState = getRecipeCheckboxState(recipe);
@@ -624,6 +624,9 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  listContent: {
+    paddingBottom: 100,
   },
   recipeContainer: {
     marginBottom: 12,
