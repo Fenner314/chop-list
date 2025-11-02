@@ -6,6 +6,7 @@ import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-nativ
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { ShoppingListItem, removeItem, updateItemCategory, reorderItems, toggleItemCompleted, clearCompleted, uncheckAll } from '@/store/slices/shoppingListSlice';
 import { initializeCategories } from '@/store/slices/settingsSlice';
+import { AnimatedCaret } from '@/components/animated-caret';
 import { ChopText } from '@/components/chop-text';
 import { AddShoppingItemModal } from '@/components/add-shopping-item-modal';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -313,9 +314,7 @@ export default function ShoppingListScreen() {
                 {listItem.itemCount} {listItem.itemCount === 1 ? 'item' : 'items'}
               </ChopText>
             </View>
-            <ChopText size="large" color="#333">
-              {isExpanded ? '−' : '+'}
-            </ChopText>
+            <AnimatedCaret isExpanded={isExpanded} color="#333" size={24} />
           </TouchableOpacity>
         </View>
       );
@@ -336,9 +335,7 @@ export default function ShoppingListScreen() {
                 {completedItems.length} {completedItems.length === 1 ? 'item' : 'items'}
               </ChopText>
             </View>
-            <ChopText size="large">
-              {completedExpanded ? '−' : '+'}
-            </ChopText>
+            <AnimatedCaret isExpanded={completedExpanded} color={darkMode ? '#999' : '#666'} size={24} />
           </TouchableOpacity>
           {completedExpanded && (
             <View style={styles.completedActions}>

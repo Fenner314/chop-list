@@ -1,4 +1,5 @@
 import { AddRecipeModal } from "@/components/add-recipe-modal";
+import { AnimatedCaret } from "@/components/animated-caret";
 import { ChopText } from "@/components/chop-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -308,9 +309,7 @@ export default function RecipesScreen() {
                         </View>
                       </View>
                       {!multiSelectMode && (
-                        <ChopText size="large">
-                          {isExpanded ? "−" : "+"}
-                        </ChopText>
+                        <AnimatedCaret isExpanded={isExpanded} color={darkMode ? '#999' : '#666'} size={24} />
                       )}
                     </TouchableOpacity>
                     {!multiSelectMode && (

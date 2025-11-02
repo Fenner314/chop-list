@@ -1,3 +1,4 @@
+import { AnimatedCaret } from "@/components/animated-caret";
 import { CategoryModal } from "@/components/category-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -13,7 +14,6 @@ import {
 import React, { useState } from "react";
 import {
   Alert,
-  Animated,
   ScrollView,
   StyleSheet,
   Switch,
@@ -33,26 +33,13 @@ export default function SettingsScreen() {
     Category | undefined
   >();
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
-  const [categoryRotation] = useState(new Animated.Value(0));
 
   const fontSizeValue =
     fontSize === "small" ? 14 : fontSize === "large" ? 20 : 16;
 
-  // Animate caret rotation
   const toggleCategoriesExpanded = () => {
-    const toValue = categoriesExpanded ? 0 : 1;
-    Animated.timing(categoryRotation, {
-      toValue,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
     setCategoriesExpanded(!categoriesExpanded);
   };
-
-  const categoryRotateInterpolate = categoryRotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "90deg"],
-  });
 
   const themeColors = [
     { name: "Blue", value: "#007AFF" },
@@ -251,15 +238,11 @@ export default function SettingsScreen() {
                   <IconSymbol name="plus" size={20} color={themeColor} />
                 </TouchableOpacity>
               )}
-              <Animated.View
-                style={{ transform: [{ rotate: categoryRotateInterpolate }] }}
-              >
-                <Text
-                  style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}
-                >
-                  ›
-                </Text>
-              </Animated.View>
+              <AnimatedCaret
+                isExpanded={categoriesExpanded}
+                color={darkMode ? "#666" : "#999"}
+                size={24}
+              />
             </View>
           </TouchableOpacity>
 

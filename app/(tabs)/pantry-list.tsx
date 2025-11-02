@@ -1,5 +1,6 @@
 import { AddPantryItemModal } from "@/components/add-pantry-item-modal";
 import { AddRecipeModal } from "@/components/add-recipe-modal";
+import { AnimatedCaret } from "@/components/animated-caret";
 import { CategoryModal } from "@/components/category-modal";
 import { RecipeSelectorModal } from "@/components/recipe-selector-modal";
 import { ChopText } from "@/components/chop-text";
@@ -496,9 +497,7 @@ export default function PantryListScreen() {
                 {listItem.itemCount === 1 ? "item" : "items"}
               </ChopText>
             </View>
-            <ChopText size="large" color="#333">
-              {isExpanded ? "−" : "+"}
-            </ChopText>
+            <AnimatedCaret isExpanded={isExpanded} color="#333" size={24} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.categoryEditButton}
