@@ -5,6 +5,8 @@ import {
   RecipeIngredient,
   updateRecipe,
 } from "@/store/slices/recipesSlice";
+import { subtractRecipeFromPantry } from "@/store/slices/itemsSlice";
+import { selectPantryItems } from "@/store/selectors/itemsSelectors";
 import {
   autoCategorizeItem,
 } from "@/utils/categorization";
@@ -37,7 +39,7 @@ export function AddRecipeModal({
 }: AddRecipeModalProps) {
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((state) => state.settings.darkMode);
-  const pantryItems = useAppSelector((state) => state.pantryList.items);
+  const pantryItems = useAppSelector(selectPantryItems);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
 
   const [name, setName] = useState("");
@@ -118,6 +120,101 @@ export function AddRecipeModal({
     onClose();
   };
 
+  const handleCookRecipe = () => {
+    if (!editRecipe) return;
+
+    // Check which ingredients are available in pantry
+    const availableIngredients: RecipeIngredient[] = [];
+    const missingIngredients: RecipeIngredient[] = [];
+    const insufficientIngredients: Array<{ ingredient: RecipeIngredient; available: number; needed: number }> = [];
+
+    editRecipe.ingredients.forEach((ingredient) => {
+      const pantryItem = pantryItems.find(
+        (item) => item.name.toLowerCase() === ingredient.name.toLowerCase()
+      );
+
+      if (!pantryItem) {
+        missingIngredients.push(ingredient);
+      } else {
+        const availableQty = parseFloat(pantryItem.quantity) || 0;
+        const neededQty = parseFloat(ingredient.quantity) || 0;
+
+        if (availableQty < neededQty) {
+          insufficientIngredients.push({
+            ingredient,
+            available: availableQty,
+            needed: neededQty,
+          });
+        } else {
+          availableIngredients.push(ingredient);
+        }
+      }
+    });
+
+    // Show warnings if any ingredients are missing or insufficient
+    if (missingIngredients.length > 0 || insufficientIngredients.length > 0) {
+      let message = "";
+
+      if (missingIngredients.length > 0) {
+        message += `Missing from pantry:\n${missingIngredients.map((i) => `• ${i.name}`).join("\n")}`;
+      }
+
+      if (insufficientIngredients.length > 0) {
+        if (message) message += "\n\n";
+        message += `Insufficient quantity:\n${insufficientIngredients
+          .map((i) => `• ${i.ingredient.name}: have ${i.available}, need ${i.needed}`)
+          .join("\n")}`;
+      }
+
+      if (availableIngredients.length > 0) {
+        message += "\n\nDo you want to subtract the available ingredients anyway?";
+      } else {
+        message += "\n\nNo ingredients can be subtracted.";
+        Alert.alert("Cannot Cook Recipe", message, [{ text: "OK" }]);
+        return;
+      }
+
+      Alert.alert("Some Ingredients Unavailable", message, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Subtract Available",
+          onPress: () => {
+            dispatch(subtractRecipeFromPantry({ ingredients: availableIngredients }));
+            Alert.alert(
+              "Recipe Cooked",
+              `Subtracted ${availableIngredients.length} ingredient${
+                availableIngredients.length !== 1 ? "s" : ""
+              } from pantry.`,
+              [{ text: "OK" }]
+            );
+            onClose();
+          },
+        },
+      ]);
+    } else {
+      // All ingredients available
+      Alert.alert(
+        "Cook Recipe",
+        `This will subtract all ingredients from your pantry. Continue?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Cook",
+            onPress: () => {
+              dispatch(subtractRecipeFromPantry({ ingredients: editRecipe.ingredients }));
+              Alert.alert(
+                "Recipe Cooked!",
+                `All ingredients subtracted from pantry. Enjoy your ${editRecipe.name}!`,
+                [{ text: "OK" }]
+              );
+              onClose();
+            },
+          },
+        ]
+      );
+    }
+  };
+
   const handleAddManualIngredient = () => {
     if (!newIngredientName.trim()) {
       return;
@@ -195,6 +292,24 @@ export function AddRecipeModal({
             </ChopText>
           </TouchableOpacity>
         </View>
+
+        {/* Cook Recipe button - only show when editing existing recipe */}
+        {editRecipe && (
+          <View style={[styles.cookRecipeContainer, { borderBottomColor: darkMode ? "#333" : "#eee" }]}>
+            <TouchableOpacity
+              style={[styles.cookRecipeButton, { backgroundColor: themeColor }]}
+              onPress={handleCookRecipe}
+            >
+              <IconSymbol name="flame.fill" size={20} color="#fff" />
+              <ChopText size="medium" weight="semibold" color="#fff">
+                Cook This Recipe
+              </ChopText>
+            </TouchableOpacity>
+            <ChopText size="xs" variant="muted" style={styles.cookRecipeHint}>
+              Subtract ingredients from your pantry
+            </ChopText>
+          </View>
+        )}
 
         <ScrollView style={styles.content}>
           <View style={styles.inputGroup}>
@@ -424,6 +539,26 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+  },
+  cookRecipeContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    alignItems: "center",
+  },
+  cookRecipeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    width: "100%",
+  },
+  cookRecipeHint: {
+    marginTop: 8,
+    textAlign: "center",
   },
   content: {
     flex: 1,

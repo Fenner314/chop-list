@@ -18,7 +18,8 @@ export interface ShoppingMetadata {
 export interface Item {
   id: string; // Global unique ID
   name: string;
-  quantity: string; // Keep as string for now (will migrate to number + unit later)
+  quantity: string; // Numeric quantity as string
+  unit?: string; // Unit of measurement (e.g., "cup", "tbsp", "g", "oz")
   category: string;
 
   // List membership - an item can be in pantry, shopping, both, or neither
@@ -47,11 +48,12 @@ const itemsSlice = createSlice({
         listType: 'pantry' | 'shopping';
         name: string;
         quantity: string;
+        unit?: string;
         category?: string;
         expirationDate?: number;
       }>
     ) => {
-      const { listType, name, quantity, category, expirationDate } = action.payload;
+      const { listType, name, quantity, unit, category, expirationDate } = action.payload;
 
       // Check if item already exists (case-insensitive name match)
       const existingItem = state.items.find(
@@ -76,11 +78,12 @@ const itemsSlice = createSlice({
           };
         }
 
-        // Update category and quantity if provided
+        // Update category, quantity, and unit if provided
         if (category) {
           existingItem.category = category;
         }
         existingItem.quantity = quantity;
+        existingItem.unit = unit;
       } else {
         // Create new item
         const autoCategory = category || autoCategorizeItem(name);
@@ -88,6 +91,7 @@ const itemsSlice = createSlice({
           id: `${Date.now()}-${Math.random()}`,
           name: name.trim(),
           quantity: quantity || '1',
+          unit: unit,
           category: autoCategory,
           lists: {},
         };
@@ -137,15 +141,17 @@ const itemsSlice = createSlice({
         itemId: string;
         name?: string;
         quantity?: string;
+        unit?: string;
         category?: string;
       }>
     ) => {
-      const { itemId, name, quantity, category } = action.payload;
+      const { itemId, name, quantity, unit, category } = action.payload;
       const item = state.items.find(i => i.id === itemId);
 
       if (item) {
         if (name !== undefined) item.name = name;
         if (quantity !== undefined) item.quantity = quantity;
+        if (unit !== undefined) item.unit = unit;
         if (category !== undefined) item.category = category;
       }
     },
@@ -300,6 +306,45 @@ const itemsSlice = createSlice({
     clearAllItems: (state) => {
       state.items = [];
     },
+
+    // Subtract recipe ingredients from pantry quantities
+    subtractRecipeFromPantry: (
+      state,
+      action: PayloadAction<{ ingredients: Array<{ name: string; quantity: string }> }>
+    ) => {
+      const { ingredients } = action.payload;
+
+      ingredients.forEach((ingredient) => {
+        // Find matching pantry item (case-insensitive)
+        const pantryItem = state.items.find(
+          (item) =>
+            item.lists.pantry &&
+            item.name.toLowerCase() === ingredient.name.toLowerCase()
+        );
+
+        if (pantryItem && pantryItem.lists.pantry) {
+          // Parse quantities
+          const currentQty = parseFloat(pantryItem.quantity) || 0;
+          const subtractQty = parseFloat(ingredient.quantity) || 0;
+
+          // Subtract quantity
+          const newQty = currentQty - subtractQty;
+
+          if (newQty <= 0) {
+            // Remove from pantry if quantity reaches 0 or below
+            delete pantryItem.lists.pantry;
+
+            // Remove item completely if not in any other list
+            if (!pantryItem.lists.shopping) {
+              state.items = state.items.filter((i) => i.id !== pantryItem.id);
+            }
+          } else {
+            // Update quantity
+            pantryItem.quantity = newQty.toString();
+          }
+        }
+      });
+    },
   },
 });
 
@@ -318,6 +363,7 @@ export const {
   clearExpiredPantry,
   clearAllFromList,
   clearAllItems,
+  subtractRecipeFromPantry,
 } = itemsSlice.actions;
 
 export default itemsSlice.reducer;

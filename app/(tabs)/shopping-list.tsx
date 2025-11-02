@@ -15,6 +15,7 @@ import {
 } from '@/store/slices/itemsSlice';
 import { selectActiveShoppingItems, selectCompletedShoppingItems } from '@/store/selectors/itemsSelectors';
 import { initializeCategories } from '@/store/slices/settingsSlice';
+import { formatQuantityWithUnit } from '@/utils/unitConversion';
 import { AnimatedCaret } from '@/components/animated-caret';
 import { ChopText } from '@/components/chop-text';
 import { AddShoppingItemModal } from '@/components/add-shopping-item-modal';
@@ -415,7 +416,7 @@ export default function ShoppingListScreen() {
               {item.name}
             </ChopText>
             <ChopText size="small" variant="muted" style={styles.completedText}>
-              {item.quantity}
+              {formatQuantityWithUnit(item.quantity, item.unit)}
             </ChopText>
           </View>
         </TouchableOpacity>
@@ -471,7 +472,7 @@ export default function ShoppingListScreen() {
               </ChopText>
             </View>
             <ChopText size="small" variant="muted">
-              {item.quantity}
+              {formatQuantityWithUnit(item.quantity, item.unit)}
             </ChopText>
           </TouchableOpacity>
           <View style={styles.dragHandleContainer}>

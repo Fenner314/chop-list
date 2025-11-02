@@ -10,6 +10,7 @@ import {
   autoCategorizeItem,
   getSuggestedCategories,
 } from "@/utils/categorization";
+import { ALL_UNITS } from "@/utils/unitConversion";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
@@ -19,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
 import { IconSymbol } from "./ui/icon-symbol";
@@ -44,6 +46,7 @@ export function AddPantryItemModal({
 
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState("other");
   const [expirationDate, setExpirationDate] = useState("");
   const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
@@ -52,6 +55,7 @@ export function AddPantryItemModal({
     if (editItem) {
       setName(editItem.name);
       setQuantity(editItem.quantity);
+      setUnit(editItem.unit || "");
       setSelectedCategory(editItem.category);
       setExpirationDate(
         editItem.lists.pantry?.expirationDate
@@ -61,6 +65,7 @@ export function AddPantryItemModal({
     } else {
       setName("");
       setQuantity("");
+      setUnit("");
       setSelectedCategory("other");
       setExpirationDate("");
       setSuggestedCategories([]);
@@ -95,6 +100,7 @@ export function AddPantryItemModal({
         itemId: editItem.id,
         name: name.trim(),
         quantity: quantity.trim() || "1",
+        unit: unit || undefined,
         category: selectedCategory,
       }));
 
@@ -113,6 +119,7 @@ export function AddPantryItemModal({
           listType: 'pantry',
           name: name.trim(),
           quantity: quantity.trim() || "1",
+          unit: unit || undefined,
           category: selectedCategory,
           expirationDate: expirationTimestamp,
         })
@@ -197,21 +204,50 @@ export function AddPantryItemModal({
 
           <View style={styles.inputGroup}>
             <ChopText size="small" variant="muted" style={styles.label}>
-              Quantity
+              Quantity & Unit
             </ChopText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: darkMode ? "#222" : "#f5f5f5",
-                  color: darkMode ? "#fff" : "#000",
-                },
-              ]}
-              value={quantity}
-              onChangeText={setQuantity}
-              placeholder="e.g., 1 gallon, 2 dozen, 500g"
-              placeholderTextColor={darkMode ? "#666" : "#999"}
-            />
+            <View style={styles.quantityRow}>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.quantityInput,
+                  {
+                    backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                    color: darkMode ? "#fff" : "#000",
+                  },
+                ]}
+                value={quantity}
+                onChangeText={setQuantity}
+                placeholder="1"
+                placeholderTextColor={darkMode ? "#666" : "#999"}
+                keyboardType="decimal-pad"
+              />
+              <View
+                style={[
+                  styles.pickerContainer,
+                  { backgroundColor: darkMode ? "#222" : "#f5f5f5" },
+                ]}
+              >
+                <Picker
+                  selectedValue={unit}
+                  onValueChange={setUnit}
+                  style={[
+                    styles.picker,
+                    { color: darkMode ? "#fff" : "#000" },
+                  ]}
+                  dropdownIconColor={darkMode ? "#fff" : "#000"}
+                >
+                  <Picker.Item label="(no unit)" value="" />
+                  {ALL_UNITS.map((unitOption) => (
+                    <Picker.Item
+                      key={unitOption.value}
+                      label={unitOption.label}
+                      value={unitOption.value}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -364,6 +400,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+  },
+  quantityRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  quantityInput: {
+    flex: 1,
+  },
+  pickerContainer: {
+    flex: 2,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  picker: {
+    height: 48,
   },
   categoryScroll: {
     marginTop: 8,

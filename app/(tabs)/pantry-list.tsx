@@ -7,14 +7,14 @@ import { RecipeSelectorModal } from "@/components/recipe-selector-modal";
 import { SearchInput } from "@/components/search-input";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectPantryItems } from "@/store/selectors/itemsSelectors";
 import {
+  addItemToList,
   Item,
   removeItemFromList,
   reorderPantryItems,
   updateItemCategory as updateItemCategoryCentralized,
-  addItemToList,
 } from "@/store/slices/itemsSlice";
-import { selectPantryItems } from "@/store/selectors/itemsSelectors";
 import {
   addIngredientsToRecipe,
   Recipe,
@@ -24,6 +24,7 @@ import {
   initializeCategories,
   updateCategory,
 } from "@/store/slices/settingsSlice";
+import { formatQuantityWithUnit } from "@/utils/unitConversion";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -627,7 +628,7 @@ export default function PantryListScreen() {
               )}
             </View>
             <ChopText size="small" variant="muted">
-              {item.quantity}
+              {formatQuantityWithUnit(item.quantity, item.unit)}
             </ChopText>
           </TouchableOpacity>
           <View style={styles.dragHandleContainer}>
