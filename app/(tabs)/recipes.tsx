@@ -9,6 +9,7 @@ import {
   removeRecipe,
 } from "@/store/slices/recipesSlice";
 import { addItem as addShoppingItem } from "@/store/slices/shoppingListSlice";
+import { addItem as addPantryItem } from "@/store/slices/pantryListSlice";
 import React, { useState } from "react";
 import {
   Alert,
@@ -23,6 +24,7 @@ export default function RecipesScreen() {
   const dispatch = useAppDispatch();
   const recipes = useAppSelector((state) => state.recipes.recipes);
   const shoppingItems = useAppSelector((state) => state.shoppingList.items);
+  const pantryItems = useAppSelector((state) => state.pantryList.items);
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
 
@@ -150,6 +152,71 @@ export default function RecipesScreen() {
       recipes.flatMap(recipe => recipe.ingredients.map(ing => ing.id))
     );
     setSelectedIngredients(allIngredientIds);
+  };
+
+  const handleAddToPantry = () => {
+    const ingredientsToAdd: RecipeIngredient[] = [];
+
+    // Add all selected ingredients
+    selectedIngredients.forEach((ingredientId) => {
+      const ingredient = recipes
+        .flatMap((r) => r.ingredients)
+        .find((ing) => ing.id === ingredientId);
+      if (ingredient) {
+        ingredientsToAdd.push(ingredient);
+      }
+    });
+
+    // Filter out duplicates already in pantry list
+    const itemsToAdd = ingredientsToAdd.filter((ingredient) => {
+      return !pantryItems.some(
+        (pantryItem) =>
+          pantryItem.name.toLowerCase() === ingredient.name.toLowerCase()
+      );
+    });
+
+    const duplicateCount = ingredientsToAdd.length - itemsToAdd.length;
+
+    // Add to pantry list
+    itemsToAdd.forEach((ingredient) => {
+      dispatch(
+        addPantryItem({
+          name: ingredient.name,
+          quantity: ingredient.quantity,
+          category: ingredient.category || "other",
+        })
+      );
+    });
+
+    // Show message
+    if (itemsToAdd.length > 0 && duplicateCount > 0) {
+      Alert.alert(
+        "Added to Pantry List",
+        `${itemsToAdd.length} item${
+          itemsToAdd.length > 1 ? "s" : ""
+        } added. ${duplicateCount} item${
+          duplicateCount > 1 ? "s were" : " was"
+        } already in pantry list.`,
+        [{ text: "OK" }]
+      );
+    } else if (itemsToAdd.length > 0) {
+      Alert.alert(
+        "Added to Pantry List",
+        `${itemsToAdd.length} item${
+          itemsToAdd.length > 1 ? "s" : ""
+        } added to pantry list`,
+        [{ text: "OK" }]
+      );
+    } else {
+      Alert.alert(
+        "Already in Pantry List",
+        "All selected items are already in your pantry list",
+        [{ text: "OK" }]
+      );
+    }
+
+    setMultiSelectMode(false);
+    setSelectedIngredients(new Set());
   };
 
   const handleAddToShopping = () => {
@@ -459,7 +526,7 @@ export default function RecipesScreen() {
           </ScrollView>
         )}
 
-        {/* Floating Action Button */}
+        {/* Floating Action Buttons */}
         {!multiSelectMode ? (
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: themeColor }]}
@@ -469,21 +536,41 @@ export default function RecipesScreen() {
             <IconSymbol name="plus" size={28} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: themeColor }]}
-            onPress={handleAddToShopping}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="cart.fill" size={24} color="#fff" />
-            <ChopText
-              size="xs"
-              weight="bold"
-              color="#fff"
-              style={{ marginTop: 2 }}
+          <>
+            {/* Add to Pantry Button */}
+            <TouchableOpacity
+              style={[styles.fabSecondary, { backgroundColor: themeColor }]}
+              onPress={handleAddToPantry}
+              activeOpacity={0.8}
             >
-              Add to Shopping
-            </ChopText>
-          </TouchableOpacity>
+              <IconSymbol name="archivebox.fill" size={24} color="#fff" />
+              <ChopText
+                size="xs"
+                weight="bold"
+                color="#fff"
+                style={{ marginTop: 2 }}
+              >
+                Add to Pantry
+              </ChopText>
+            </TouchableOpacity>
+
+            {/* Add to Shopping Button */}
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: themeColor }]}
+              onPress={handleAddToShopping}
+              activeOpacity={0.8}
+            >
+              <IconSymbol name="cart.fill" size={24} color="#fff" />
+              <ChopText
+                size="xs"
+                weight="bold"
+                color="#fff"
+                style={{ marginTop: 2 }}
+              >
+                Add to Shopping
+              </ChopText>
+            </TouchableOpacity>
+          </>
         )}
 
         <AddRecipeModal
@@ -596,6 +683,26 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 20,
     bottom: 20,
+    minWidth: 60,
+    minHeight: 60,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  fabSecondary: {
+    position: "absolute",
+    right: 20,
+    bottom: 90,
     minWidth: 60,
     minHeight: 60,
     paddingHorizontal: 16,
