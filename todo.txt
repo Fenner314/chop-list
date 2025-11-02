@@ -1,0 +1,1 @@
+1. Add Shopping List setting to increase the quanity of the item in the Pantry List after marking it as complete in order to keep the Pantry List synced with the actual amount of the item obtained
