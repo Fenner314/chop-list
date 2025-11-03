@@ -45,13 +45,21 @@ export function AddRecipeModal({
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const pantryItems = useAppSelector(selectPantryItems);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
-  const defaultServings = useAppSelector((state) => state.settings.recipesSettings.defaultServings);
+  const defaultServings = useAppSelector(
+    (state) => state.settings.recipesSettings.defaultServings
+  );
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [servings, setServings] = useState(defaultServings.toString());
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
+
+  const nameRef = useRef<TextInput>(null);
+  const descriptionRef = useRef<TextInput>(null);
+  const servingsRef = useRef<TextInput>(null);
+  const ingredientNameRef = useRef<TextInput>(null);
+  const ingredientQuantityRef = useRef<TextInput>(null);
 
   // New ingredient form
   const [newIngredientName, setNewIngredientName] = useState("");
@@ -75,6 +83,16 @@ export function AddRecipeModal({
         )
         .slice(0, 5)
     : [];
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (visible && !editRecipe) {
+        nameRef.current?.focus();
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [editRecipe, visible]);
 
   useEffect(() => {
     if (editRecipe) {
@@ -294,6 +312,11 @@ export function AddRecipeModal({
     setNewIngredientName("");
     setNewIngredientQuantity("");
     setNewIngredientUnit("");
+
+    // Keep keyboard open and focus ingredient name input
+    setTimeout(() => {
+      ingredientNameRef.current?.focus();
+    }, 100);
   };
 
   const handleRemoveIngredient = (ingredientId: string) => {
@@ -330,6 +353,11 @@ export function AddRecipeModal({
     setNewIngredientQuantity(item.quantity);
     setNewIngredientUnit(item.unit || "");
     setShowSuggestions(false);
+
+    // Keep keyboard open and focus quantity input
+    setTimeout(() => {
+      ingredientQuantityRef.current?.focus();
+    }, 100);
   };
 
   return (
@@ -402,11 +430,13 @@ export function AddRecipeModal({
                   color: darkMode ? "#fff" : "#000",
                 },
               ]}
+              ref={nameRef}
               value={name}
               onChangeText={setName}
               placeholder="e.g., Fried Rice, Chocolate Cake"
               placeholderTextColor={darkMode ? "#666" : "#999"}
-              autoFocus
+              returnKeyType="next"
+              onSubmitEditing={() => descriptionRef.current?.focus()}
             />
           </View>
 
@@ -423,6 +453,7 @@ export function AddRecipeModal({
                   color: darkMode ? "#fff" : "#000",
                 },
               ]}
+              ref={descriptionRef}
               value={description}
               onChangeText={setDescription}
               placeholder="Brief description of the recipe"
@@ -444,11 +475,14 @@ export function AddRecipeModal({
                   color: darkMode ? "#fff" : "#000",
                 },
               ]}
+              ref={servingsRef}
               value={servings}
               onChangeText={setServings}
               placeholder="4"
               placeholderTextColor={darkMode ? "#666" : "#999"}
               keyboardType="number-pad"
+              returnKeyType="next"
+              onSubmitEditing={() => ingredientNameRef.current?.focus()}
             />
           </View>
 
@@ -531,6 +565,7 @@ export function AddRecipeModal({
 
               <View style={styles.addIngredientFormColumn}>
                 <TextInput
+                  ref={ingredientNameRef}
                   style={[
                     styles.input,
                     {
@@ -545,6 +580,9 @@ export function AddRecipeModal({
                   }}
                   placeholder="Ingredient name"
                   placeholderTextColor={darkMode ? "#666" : "#999"}
+                  returnKeyType="next"
+                  onSubmitEditing={() => ingredientQuantityRef.current?.focus()}
+                  blurOnSubmit={false}
                 />
 
                 {/* Pantry suggestions */}
@@ -584,6 +622,7 @@ export function AddRecipeModal({
 
                 <View style={styles.quantityUnitAddRow}>
                   <TextInput
+                    ref={ingredientQuantityRef}
                     style={[
                       styles.input,
                       styles.ingredientQuantityInput,
@@ -597,6 +636,8 @@ export function AddRecipeModal({
                     placeholder="Qty"
                     placeholderTextColor={darkMode ? "#666" : "#999"}
                     keyboardType="decimal-pad"
+                    returnKeyType="done"
+                    onSubmitEditing={handleAddManualIngredient}
                   />
                   <View
                     style={[

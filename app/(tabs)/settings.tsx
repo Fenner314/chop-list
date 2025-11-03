@@ -15,6 +15,8 @@ import {
 import React, { useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -98,128 +100,25 @@ export default function SettingsScreen() {
       ]}
       edges={["top"]}
     >
-      <ScrollView style={styles.content}>
-        <Text
-          style={[
-            styles.mainTitle,
-            { fontSize: fontSizeValue + 8, color: themeColor },
-          ]}
-        >
-          Settings
-        </Text>
-
-        <View
-          style={[
-            styles.section,
-            { borderBottomColor: darkMode ? "#333" : "#eee" },
-          ]}
-        >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView style={styles.content}>
           <Text
             style={[
-              styles.sectionTitle,
-              {
-                fontSize: fontSizeValue + 2,
-                color: darkMode ? "#fff" : "#333",
-              },
+              styles.mainTitle,
+              { fontSize: fontSizeValue + 8, color: themeColor },
             ]}
           >
-            General Settings
+            Settings
           </Text>
 
-          <View style={styles.settingItem}>
-            <Text
-              style={[
-                styles.settingLabel,
-                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
-              ]}
-            >
-              Dark Mode
-            </Text>
-            <Switch
-              value={darkMode}
-              onValueChange={(value) => dispatch(setDarkMode(value))}
-              trackColor={{ false: "#767577", true: themeColor }}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <Text
-              style={[
-                styles.settingLabel,
-                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
-              ]}
-            >
-              Theme Color
-            </Text>
-          </View>
-          <View style={styles.colorPickerContainer}>
-            {themeColors.map((color) => (
-              <TouchableOpacity
-                key={color.value}
-                style={[
-                  styles.colorButton,
-                  { backgroundColor: color.value },
-                  themeColor === color.value && {
-                    borderColor: darkMode ? "#fff" : "#000",
-                    borderWidth: 3,
-                  },
-                ]}
-                onPress={() => dispatch(setThemeColor(color.value))}
-              >
-                {themeColor === color.value && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.settingItem}>
-            <Text
-              style={[
-                styles.settingLabel,
-                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
-              ]}
-            >
-              Font Size
-            </Text>
-          </View>
-          <View style={styles.fontSizeContainer}>
-            {(["small", "medium", "large"] as const).map((size) => (
-              <TouchableOpacity
-                key={size}
-                style={[
-                  styles.fontSizeButton,
-                  { backgroundColor: darkMode ? "#222" : "#f0f0f0" },
-                  fontSize === size && { backgroundColor: themeColor },
-                ]}
-                onPress={() => dispatch(setFontSize(size))}
-              >
-                <Text
-                  style={[
-                    styles.fontSizeText,
-                    {
-                      fontSize: fontSizeValue - 2,
-                      color: darkMode ? "#fff" : "#333",
-                    },
-                    fontSize === size && styles.selectedFontSizeText,
-                  ]}
-                >
-                  {size.charAt(0).toUpperCase() + size.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View
-          style={[
-            styles.section,
-            { borderBottomColor: darkMode ? "#333" : "#eee" },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.collapsibleSectionHeader}
-            onPress={toggleCategoriesExpanded}
+          <View
+            style={[
+              styles.section,
+              { borderBottomColor: darkMode ? "#333" : "#eee" },
+            ]}
           >
             <Text
               style={[
@@ -230,215 +129,353 @@ export default function SettingsScreen() {
                 },
               ]}
             >
-              Categories ({categories.length})
+              General Settings
             </Text>
-            <View style={styles.sectionHeaderActions}>
-              {categoriesExpanded && (
+
+            <View style={styles.settingItem}>
+              <Text
+                style={[
+                  styles.settingLabel,
+                  {
+                    fontSize: fontSizeValue,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Dark Mode
+              </Text>
+              <Switch
+                value={darkMode}
+                onValueChange={(value) => dispatch(setDarkMode(value))}
+                trackColor={{ false: "#767577", true: themeColor }}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <Text
+                style={[
+                  styles.settingLabel,
+                  {
+                    fontSize: fontSizeValue,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Theme Color
+              </Text>
+            </View>
+            <View style={styles.colorPickerContainer}>
+              {themeColors.map((color) => (
                 <TouchableOpacity
-                  onPress={handleAddCategory}
-                  style={styles.addButton}
+                  key={color.value}
+                  style={[
+                    styles.colorButton,
+                    { backgroundColor: color.value },
+                    themeColor === color.value && {
+                      borderColor: darkMode ? "#fff" : "#000",
+                      borderWidth: 3,
+                    },
+                  ]}
+                  onPress={() => dispatch(setThemeColor(color.value))}
                 >
-                  <IconSymbol name="plus" size={20} color={themeColor} />
+                  {themeColor === color.value && (
+                    <Text style={styles.checkmark}>✓</Text>
+                  )}
                 </TouchableOpacity>
-              )}
+              ))}
+            </View>
+
+            <View style={styles.settingItem}>
+              <Text
+                style={[
+                  styles.settingLabel,
+                  {
+                    fontSize: fontSizeValue,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Font Size
+              </Text>
+            </View>
+            <View style={styles.fontSizeContainer}>
+              {(["small", "medium", "large"] as const).map((size) => (
+                <TouchableOpacity
+                  key={size}
+                  style={[
+                    styles.fontSizeButton,
+                    { backgroundColor: darkMode ? "#222" : "#f0f0f0" },
+                    fontSize === size && { backgroundColor: themeColor },
+                  ]}
+                  onPress={() => dispatch(setFontSize(size))}
+                >
+                  <Text
+                    style={[
+                      styles.fontSizeText,
+                      {
+                        fontSize: fontSizeValue - 2,
+                        color: darkMode ? "#fff" : "#333",
+                      },
+                      fontSize === size && styles.selectedFontSizeText,
+                    ]}
+                  >
+                    {size.charAt(0).toUpperCase() + size.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.section,
+              { borderBottomColor: darkMode ? "#333" : "#eee" },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.collapsibleSectionHeader}
+              onPress={toggleCategoriesExpanded}
+            >
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    fontSize: fontSizeValue + 2,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Categories ({categories.length})
+              </Text>
+              <View style={styles.sectionHeaderActions}>
+                {categoriesExpanded && (
+                  <TouchableOpacity
+                    onPress={handleAddCategory}
+                    style={styles.addButton}
+                  >
+                    <IconSymbol name="plus" size={20} color={themeColor} />
+                  </TouchableOpacity>
+                )}
+                <AnimatedCaret
+                  isExpanded={categoriesExpanded}
+                  color={darkMode ? "#666" : "#999"}
+                  size={24}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {categoriesExpanded && (
+              <View style={styles.categoryList}>
+                {categories.map((category) => (
+                  <View
+                    key={category.id}
+                    style={[
+                      styles.categoryItem,
+                      { backgroundColor: category.color },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.categoryName, { fontSize: fontSizeValue }]}
+                    >
+                      {category.name}
+                    </Text>
+                    <View style={styles.categoryActions}>
+                      <TouchableOpacity
+                        onPress={() => handleEditCategory(category)}
+                        style={styles.categoryActionButton}
+                      >
+                        <IconSymbol name="pencil" size={16} color="#666" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteCategory(category)}
+                        style={styles.categoryActionButton}
+                      >
+                        <IconSymbol name="trash" size={16} color="#ff3b30" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View
+            style={[
+              styles.section,
+              { borderBottomColor: darkMode ? "#333" : "#eee" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  fontSize: fontSizeValue + 2,
+                  color: darkMode ? "#fff" : "#333",
+                },
+              ]}
+            >
+              Feature Settings
+            </Text>
+
+            <TouchableOpacity style={styles.settingButton}>
+              <Text
+                style={[
+                  styles.settingButtonText,
+                  {
+                    fontSize: fontSizeValue,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Shopping List Settings
+              </Text>
               <AnimatedCaret
-                isExpanded={categoriesExpanded}
+                isExpanded={false} // TODO: implement expansion
                 color={darkMode ? "#666" : "#999"}
                 size={24}
               />
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
 
-          {categoriesExpanded && (
-            <View style={styles.categoryList}>
-              {categories.map((category) => (
-                <View
-                  key={category.id}
-                  style={[
-                    styles.categoryItem,
-                    { backgroundColor: category.color },
-                  ]}
-                >
+            <TouchableOpacity style={styles.settingButton}>
+              <Text
+                style={[
+                  styles.settingButtonText,
+                  {
+                    fontSize: fontSizeValue,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Pantry List Settings
+              </Text>
+              <AnimatedCaret
+                isExpanded={false} // TODO: implement expansion
+                color={darkMode ? "#666" : "#999"}
+                size={24}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingButton}
+              onPress={() => setRecipesExpanded(!recipesExpanded)}
+            >
+              <Text
+                style={[
+                  styles.settingButtonText,
+                  {
+                    fontSize: fontSizeValue,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Recipes Settings
+              </Text>
+              <AnimatedCaret
+                isExpanded={recipesExpanded}
+                color={darkMode ? "#666" : "#999"}
+                size={24}
+              />
+            </TouchableOpacity>
+
+            {recipesExpanded && (
+              <View style={styles.expandedContent}>
+                <View style={styles.settingRow}>
                   <Text
-                    style={[styles.categoryName, { fontSize: fontSizeValue }]}
+                    style={[
+                      styles.settingLabel,
+                      {
+                        fontSize: fontSizeValue,
+                        color: darkMode ? "#fff" : "#333",
+                      },
+                    ]}
                   >
-                    {category.name}
+                    Default Servings
                   </Text>
-                  <View style={styles.categoryActions}>
-                    <TouchableOpacity
-                      onPress={() => handleEditCategory(category)}
-                      style={styles.categoryActionButton}
-                    >
-                      <IconSymbol name="pencil" size={16} color="#666" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleDeleteCategory(category)}
-                      style={styles.categoryActionButton}
-                    >
-                      <IconSymbol name="trash" size={16} color="#ff3b30" />
-                    </TouchableOpacity>
-                  </View>
+                  <TextInput
+                    style={[
+                      styles.numberInput,
+                      {
+                        fontSize: fontSizeValue,
+                        color: darkMode ? "#fff" : "#333",
+                        backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                        borderColor: darkMode ? "#444" : "#ddd",
+                      },
+                    ]}
+                    defaultValue={settings.recipesSettings.defaultServings.toString()}
+                    onEndEditing={(e) => {
+                      const num = parseInt(e.nativeEvent.text);
+                      if (!isNaN(num) && num > 0) {
+                        dispatch(
+                          updateRecipesSettings({ defaultServings: num })
+                        );
+                      }
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View
-          style={[
-            styles.section,
-            { borderBottomColor: darkMode ? "#333" : "#eee" },
-          ]}
-        >
-          <Text
-            style={[
-              styles.sectionTitle,
-              {
-                fontSize: fontSizeValue + 2,
-                color: darkMode ? "#fff" : "#333",
-              },
-            ]}
-          >
-            Feature Settings
-          </Text>
-
-          <TouchableOpacity style={styles.settingButton}>
-            <Text
-              style={[
-                styles.settingButtonText,
-                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
-              ]}
-            >
-              Shopping List Settings
-            </Text>
-            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
-              ›
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingButton}>
-            <Text
-              style={[
-                styles.settingButtonText,
-                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
-              ]}
-            >
-              Pantry List Settings
-            </Text>
-            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
-              ›
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingButton}
-            onPress={() => setRecipesExpanded(!recipesExpanded)}
-          >
-            <Text
-              style={[
-                styles.settingButtonText,
-                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
-              ]}
-            >
-              Recipes Settings
-            </Text>
-            <AnimatedCaret
-              isExpanded={recipesExpanded}
-              color={darkMode ? "#666" : "#999"}
-            />
-          </TouchableOpacity>
-
-          {recipesExpanded && (
-            <View style={styles.expandedContent}>
-              <View style={styles.settingRow}>
-                <Text
-                  style={[
-                    styles.settingLabel,
-                    {
-                      fontSize: fontSizeValue,
-                      color: darkMode ? "#fff" : "#333",
-                    },
-                  ]}
-                >
-                  Default Servings
-                </Text>
-                <TextInput
-                  style={[
-                    styles.numberInput,
-                    {
-                      fontSize: fontSizeValue,
-                      color: darkMode ? "#fff" : "#333",
-                      backgroundColor: darkMode ? "#222" : "#f5f5f5",
-                      borderColor: darkMode ? "#444" : "#ddd",
-                    },
-                  ]}
-                  value={settings.recipesSettings.defaultServings.toString()}
-                  onChangeText={(text) => {
-                    const num = parseInt(text);
-                    if (!isNaN(num) && num > 0) {
-                      dispatch(updateRecipesSettings({ defaultServings: num }));
-                    }
-                  }}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                />
               </View>
-            </View>
-          )}
-        </View>
+            )}
+          </View>
 
-        <View
-          style={[
-            styles.section,
-            { borderBottomColor: darkMode ? "#333" : "#eee" },
-          ]}
-        >
-          <Text
+          <View
             style={[
-              styles.sectionTitle,
-              {
-                fontSize: fontSizeValue + 2,
-                color: darkMode ? "#fff" : "#333",
-              },
+              styles.section,
+              { borderBottomColor: darkMode ? "#333" : "#eee" },
             ]}
           >
-            Account
-          </Text>
-
-          <TouchableOpacity style={styles.settingButton}>
             <Text
               style={[
-                styles.settingButtonText,
-                { fontSize: fontSizeValue, color: darkMode ? "#fff" : "#333" },
+                styles.sectionTitle,
+                {
+                  fontSize: fontSizeValue + 2,
+                  color: darkMode ? "#fff" : "#333",
+                },
               ]}
             >
-              Account Settings
+              Account
             </Text>
-            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
-              ›
-            </Text>
-          </TouchableOpacity>
-        </View>
 
-        <View
-          style={[
-            styles.section,
-            { borderBottomColor: darkMode ? "#333" : "#eee" },
-          ]}
-        >
-          <Text
+            <TouchableOpacity style={styles.settingButton}>
+              <Text
+                style={[
+                  styles.settingButtonText,
+                  {
+                    fontSize: fontSizeValue,
+                    color: darkMode ? "#fff" : "#333",
+                  },
+                ]}
+              >
+                Account Settings
+              </Text>
+              <AnimatedCaret
+                isExpanded={false} // TODO: implement expansion
+                color={darkMode ? "#666" : "#999"}
+                size={24}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View
             style={[
-              styles.versionText,
-              {
-                fontSize: fontSizeValue - 4,
-                color: darkMode ? "#666" : "#999",
-              },
+              styles.section,
+              { borderBottomColor: darkMode ? "#333" : "#eee" },
             ]}
           >
-            Version 1.0.0
-          </Text>
-        </View>
-      </ScrollView>
+            <Text
+              style={[
+                styles.versionText,
+                {
+                  fontSize: fontSizeValue - 4,
+                  color: darkMode ? "#666" : "#999",
+                },
+              ]}
+            >
+              Version 1.0.0
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <CategoryModal
         visible={categoryModalVisible}
