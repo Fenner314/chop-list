@@ -10,6 +10,7 @@ import {
   setFontSize,
   setThemeColor,
   updateCategory,
+  updateRecipesSettings,
 } from "@/store/slices/settingsSlice";
 import React, { useState } from "react";
 import {
@@ -18,6 +19,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -33,6 +35,7 @@ export default function SettingsScreen() {
     Category | undefined
   >();
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const [recipesExpanded, setRecipesExpanded] = useState(false);
 
   const fontSizeValue =
     fontSize === "small" ? 14 : fontSize === "large" ? 20 : 16;
@@ -327,7 +330,10 @@ export default function SettingsScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => setRecipesExpanded(!recipesExpanded)}
+          >
             <Text
               style={[
                 styles.settingButtonText,
@@ -336,10 +342,49 @@ export default function SettingsScreen() {
             >
               Recipes Settings
             </Text>
-            <Text style={[styles.arrow, { color: darkMode ? "#666" : "#999" }]}>
-              ›
-            </Text>
+            <AnimatedCaret
+              isExpanded={recipesExpanded}
+              color={darkMode ? "#666" : "#999"}
+            />
           </TouchableOpacity>
+
+          {recipesExpanded && (
+            <View style={styles.expandedContent}>
+              <View style={styles.settingRow}>
+                <Text
+                  style={[
+                    styles.settingLabel,
+                    {
+                      fontSize: fontSizeValue,
+                      color: darkMode ? "#fff" : "#333",
+                    },
+                  ]}
+                >
+                  Default Servings
+                </Text>
+                <TextInput
+                  style={[
+                    styles.numberInput,
+                    {
+                      fontSize: fontSizeValue,
+                      color: darkMode ? "#fff" : "#333",
+                      backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                      borderColor: darkMode ? "#444" : "#ddd",
+                    },
+                  ]}
+                  value={settings.recipesSettings.defaultServings.toString()}
+                  onChangeText={(text) => {
+                    const num = parseInt(text);
+                    if (!isNaN(num) && num > 0) {
+                      dispatch(updateRecipesSettings({ defaultServings: num }));
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+            </View>
+          )}
         </View>
 
         <View
@@ -528,5 +573,23 @@ const styles = StyleSheet.create({
   },
   categoryActionButton: {
     padding: 4,
+  },
+  expandedContent: {
+    paddingTop: 12,
+    paddingLeft: 24,
+  },
+  settingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  numberInput: {
+    width: 60,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    textAlign: "center",
+    paddingHorizontal: 8,
   },
 });

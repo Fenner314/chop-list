@@ -11,7 +11,6 @@ import {
   getSuggestedCategories,
 } from "@/utils/categorization";
 import { ALL_UNITS } from "@/utils/unitConversion";
-import RNPickerSelect from "react-native-picker-select";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
@@ -21,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import RNPickerSelect from "react-native-picker-select";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
 import { IconSymbol } from "./ui/icon-symbol";
@@ -59,7 +59,9 @@ export function AddPantryItemModal({
       setSelectedCategory(editItem.category);
       setExpirationDate(
         editItem.lists.pantry?.expirationDate
-          ? new Date(editItem.lists.pantry.expirationDate).toISOString().split("T")[0]
+          ? new Date(editItem.lists.pantry.expirationDate)
+              .toISOString()
+              .split("T")[0]
           : ""
       );
     } else {
@@ -96,27 +98,31 @@ export function AddPantryItemModal({
 
     if (editItem) {
       // Update core item properties (affects all lists)
-      dispatch(updateItem({
-        itemId: editItem.id,
-        name: name.trim(),
-        quantity: quantity.trim() || "1",
-        unit: unit || undefined,
-        category: selectedCategory,
-      }));
+      dispatch(
+        updateItem({
+          itemId: editItem.id,
+          name: name.trim(),
+          quantity: quantity.trim() || "1",
+          unit: unit || undefined,
+          category: selectedCategory,
+        })
+      );
 
       // Update pantry-specific metadata
-      dispatch(updatePantryMetadata({
-        itemId: editItem.id,
-        metadata: {
-          expirationDate: expirationTimestamp,
-        },
-      }));
+      dispatch(
+        updatePantryMetadata({
+          itemId: editItem.id,
+          metadata: {
+            expirationDate: expirationTimestamp,
+          },
+        })
+      );
 
       onClose();
     } else {
       dispatch(
         addItemToList({
-          listType: 'pantry',
+          listType: "pantry",
           name: name.trim(),
           quantity: quantity.trim() || "1",
           unit: unit || undefined,
@@ -420,6 +426,7 @@ const styles = StyleSheet.create({
   },
   picker: {
     height: 48,
+    paddingLeft: 12,
   },
   categoryScroll: {
     marginTop: 8,

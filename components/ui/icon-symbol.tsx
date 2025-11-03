@@ -29,6 +29,7 @@ const MAPPING = {
   circle: "radio-button-unchecked",
   "line.horizontal.3": "drag-handle",
   "xmark.circle.fill": "cancel",
+  checkmark: "check",
 } as IconMapping;
 
 /**

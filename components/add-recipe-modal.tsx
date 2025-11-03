@@ -9,8 +9,7 @@ import {
 } from "@/store/slices/recipesSlice";
 import { autoCategorizeItem } from "@/utils/categorization";
 import { ALL_UNITS, formatQuantityWithUnit } from "@/utils/unitConversion";
-import RNPickerSelect from "react-native-picker-select";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Modal,
@@ -20,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import RNPickerSelect from "react-native-picker-select";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
 import { IconSymbol } from "./ui/icon-symbol";
@@ -45,10 +45,12 @@ export function AddRecipeModal({
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const pantryItems = useAppSelector(selectPantryItems);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
+  const defaultServings = useAppSelector((state) => state.settings.recipesSettings.defaultServings);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [servings, setServings] = useState("4");
+  const [servings, setServings] = useState(defaultServings.toString());
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
 
   // New ingredient form
@@ -83,7 +85,7 @@ export function AddRecipeModal({
     } else {
       setName("");
       setDescription("");
-      setServings("4");
+      setServings(defaultServings.toString());
 
       // If preselected ingredients are provided, add them
       if (preselectedIngredients && preselectedIngredients.length > 0) {
@@ -105,7 +107,7 @@ export function AddRecipeModal({
     setNewIngredientUnit("");
     setShowSuggestions(false);
     setEditingIngredient(null);
-  }, [editRecipe, visible, preselectedIngredients]);
+  }, [editRecipe, visible, preselectedIngredients, defaultServings]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -309,6 +311,11 @@ export function AddRecipeModal({
     setNewIngredientName(ingredient.name);
     setNewIngredientQuantity(ingredient.quantity);
     setNewIngredientUnit(ingredient.unit || "");
+
+    // Scroll to bottom to show the input fields
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const handleCancelEdit = () => {
@@ -378,7 +385,11 @@ export function AddRecipeModal({
           </View>
         )}
 
-        <ScrollView style={styles.content}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+        >
           <View style={styles.inputGroup}>
             <ChopText size="small" variant="muted" style={styles.label}>
               Recipe Name *
@@ -450,46 +461,50 @@ export function AddRecipeModal({
             {ingredients.length > 0 && (
               <View style={styles.ingredientsList}>
                 {ingredients.map((ingredient) => (
-                  <View
+                  <TouchableOpacity
                     key={ingredient.id}
-                    style={[
-                      styles.ingredientItem,
-                      { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
-                    ]}
+                    onPress={() => handleEditIngredient(ingredient)}
                   >
-                    <View style={styles.ingredientInfo}>
-                      <ChopText size="small" weight="semibold">
-                        {ingredient.name}
-                      </ChopText>
-                      <ChopText size="xs" variant="muted">
-                        {formatQuantityWithUnit(
-                          ingredient.quantity,
-                          ingredient.unit
-                        )}
-                      </ChopText>
+                    <View
+                      style={[
+                        styles.ingredientItem,
+                        { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
+                      ]}
+                    >
+                      <View style={styles.ingredientInfo}>
+                        <ChopText size="small" weight="semibold">
+                          {ingredient.name}
+                        </ChopText>
+                        <ChopText size="xs" variant="muted">
+                          {formatQuantityWithUnit(
+                            ingredient.quantity,
+                            ingredient.unit
+                          )}
+                        </ChopText>
+                      </View>
+                      <View style={styles.ingredientActions}>
+                        {/* <TouchableOpacity
+                          onPress={() => handleEditIngredient(ingredient)}
+                          style={{ marginRight: 12 }}
+                        >
+                          <IconSymbol
+                            name="pencil"
+                            size={18}
+                            color={themeColor}
+                          />
+                        </TouchableOpacity> */}
+                        <TouchableOpacity
+                          onPress={() => handleRemoveIngredient(ingredient.id)}
+                        >
+                          <IconSymbol
+                            name="xmark.circle.fill"
+                            size={20}
+                            color="#ff3b30"
+                          />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <View style={styles.ingredientActions}>
-                      <TouchableOpacity
-                        onPress={() => handleEditIngredient(ingredient)}
-                        style={{ marginRight: 12 }}
-                      >
-                        <IconSymbol
-                          name="pencil"
-                          size={18}
-                          color={themeColor}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => handleRemoveIngredient(ingredient.id)}
-                      >
-                        <IconSymbol
-                          name="xmark.circle.fill"
-                          size={20}
-                          color="#ff3b30"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -628,7 +643,7 @@ export function AddRecipeModal({
             </>
           </View>
 
-          <View style={styles.infoBox}>
+          <View>
             <ChopText size="xs" variant="muted">
               * Required fields
             </ChopText>
@@ -677,7 +692,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 20,
+    paddingBottom: 100,
   },
   inputGroup: {
     marginBottom: 24,
@@ -773,5 +791,6 @@ const styles = StyleSheet.create({
   },
   unitPicker: {
     height: 44,
+    paddingLeft: 12,
   },
 });
