@@ -181,9 +181,12 @@ export function AddRecipeModal({
         (item) => item.name.toLowerCase() === ingredient.name.toLowerCase()
       );
 
+      debugger;
       if (!pantryItem) {
         missingIngredients.push(ingredient);
       } else {
+        if (!pantryItem.unit) return;
+
         const availableQty = parseFloat(pantryItem.quantity) || 0;
         const neededQty = parseFloat(ingredient.quantity) || 0;
 
@@ -646,8 +649,10 @@ export function AddRecipeModal({
                     ]}
                   >
                     <RNPickerSelect
-                      value={newIngredientUnit}
-                      onValueChange={setNewIngredientUnit}
+                      value={newIngredientUnit || ""}
+                      onValueChange={(value) =>
+                        setNewIngredientUnit(value || "")
+                      }
                       items={[
                         { label: "(no unit)", value: "" },
                         ...ALL_UNITS.map((unitOption) => ({

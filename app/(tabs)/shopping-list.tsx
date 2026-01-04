@@ -416,7 +416,10 @@ export default function ShoppingListScreen() {
               {item.name}
             </ChopText>
             <ChopText size="small" variant="muted" style={styles.completedText}>
-              {formatQuantityWithUnit(item.quantity, item.unit)}
+              {formatQuantityWithUnit(
+                item.lists.shopping?.quantity || item.quantity,
+                item.lists.shopping?.unit !== undefined ? item.lists.shopping.unit : item.unit
+              )}
             </ChopText>
           </View>
         </TouchableOpacity>
@@ -472,7 +475,10 @@ export default function ShoppingListScreen() {
               </ChopText>
             </View>
             <ChopText size="small" variant="muted">
-              {formatQuantityWithUnit(item.quantity, item.unit)}
+              {formatQuantityWithUnit(
+                item.lists.shopping?.quantity || item.quantity,
+                item.lists.shopping?.unit !== undefined ? item.lists.shopping.unit : item.unit
+              )}
             </ChopText>
           </TouchableOpacity>
           <View style={styles.dragHandleContainer}>

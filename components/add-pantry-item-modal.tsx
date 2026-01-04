@@ -54,8 +54,8 @@ export function AddPantryItemModal({
   useEffect(() => {
     if (editItem) {
       setName(editItem.name);
-      setQuantity(editItem.quantity);
-      setUnit(editItem.unit || "");
+      setQuantity(editItem.lists.pantry?.quantity || editItem.quantity);
+      setUnit(editItem.lists.pantry?.unit !== undefined ? editItem.lists.pantry.unit : (editItem.unit || ""));
       setSelectedCategory(editItem.category);
       setExpirationDate(
         editItem.lists.pantry?.expirationDate
@@ -97,14 +97,15 @@ export function AddPantryItemModal({
       : undefined;
 
     if (editItem) {
-      // Update core item properties (affects all lists)
+      // Update pantry list item properties
       dispatch(
         updateItem({
           itemId: editItem.id,
           name: name.trim(),
           quantity: quantity.trim() || "1",
-          unit: unit || undefined,
+          unit: unit,
           category: selectedCategory,
+          listType: "pantry",
         })
       );
 
@@ -235,8 +236,8 @@ export function AddPantryItemModal({
                 ]}
               >
                 <RNPickerSelect
-                  value={unit}
-                  onValueChange={setUnit}
+                  value={unit || ""}
+                  onValueChange={(value) => setUnit(value || "")}
                   items={[
                     { label: "(no unit)", value: "" },
                     ...ALL_UNITS.map((unitOption) => ({

@@ -247,7 +247,11 @@ export function pluralizeUnit(unit: string, quantity: number): string {
  * Format a quantity with unit for display, handling plurality
  */
 export function formatQuantityWithUnit(quantity: string, unit?: string): string {
-  if (!unit) return quantity;
+  if (!unit) {
+    if (quantity == "1") return "";
+
+    return quantity;
+  }
 
   const qty = parseFloat(quantity);
   if (isNaN(qty)) return `${quantity} ${unit}`;

@@ -48,8 +48,8 @@ export function AddShoppingItemModal({
   useEffect(() => {
     if (editItem) {
       setName(editItem.name);
-      setQuantity(editItem.quantity);
-      setUnit(editItem.unit || "");
+      setQuantity(editItem.lists.shopping?.quantity || editItem.quantity);
+      setUnit(editItem.lists.shopping?.unit !== undefined ? editItem.lists.shopping.unit : (editItem.unit || ""));
       setSelectedCategory(editItem.category);
     } else {
       setName("");
@@ -78,7 +78,7 @@ export function AddShoppingItemModal({
     }
 
     if (editItem) {
-      // Update core item properties (affects all lists)
+      // Update shopping list item properties
       dispatch(
         updateItem({
           itemId: editItem.id,
@@ -86,6 +86,7 @@ export function AddShoppingItemModal({
           quantity: quantity.trim() || "1",
           unit: unit || undefined,
           category: selectedCategory,
+          listType: "shopping",
         })
       );
 
@@ -196,8 +197,8 @@ export function AddShoppingItemModal({
                 ]}
               >
                 <RNPickerSelect
-                  value={unit}
-                  onValueChange={setUnit}
+                  value={unit || ""}
+                  onValueChange={(value) => setUnit(value || "")}
                   items={[
                     { label: "(no unit)", value: "" },
                     ...ALL_UNITS.map((unitOption) => ({

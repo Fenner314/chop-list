@@ -321,6 +321,7 @@ export default function PantryListScreen() {
         listType: 'shopping',
         name: item.name,
         quantity: item.quantity,
+        unit: item.unit,
         category: item.category,
       }));
     });
@@ -628,7 +629,10 @@ export default function PantryListScreen() {
               )}
             </View>
             <ChopText size="small" variant="muted">
-              {formatQuantityWithUnit(item.quantity, item.unit)}
+              {formatQuantityWithUnit(
+                item.lists.pantry?.quantity || item.quantity,
+                item.lists.pantry?.unit !== undefined ? item.lists.pantry.unit : item.unit
+              )}
             </ChopText>
           </TouchableOpacity>
           <View style={styles.dragHandleContainer}>
