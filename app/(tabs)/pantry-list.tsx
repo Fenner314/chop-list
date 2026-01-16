@@ -61,6 +61,9 @@ export default function PantryListScreen() {
   const sortBy = useAppSelector(
     (state) => state.settings.pantryListSettings.sortBy
   );
+  const showEmptyCategories = useAppSelector(
+    (state) => state.settings.pantryListSettings.showEmptyCategories
+  );
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editItem, setEditItem] = useState<Item | undefined>();
@@ -122,7 +125,8 @@ export default function PantryListScreen() {
       const categoryItems = filteredItems.filter(
         (item) => item.category === category.id
       );
-      if (categoryItems.length > 0) {
+      // Show category if it has items OR if showEmptyCategories is enabled
+      if (categoryItems.length > 0 || showEmptyCategories) {
         // Add category header
         data.push({
           type: "category",

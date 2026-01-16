@@ -32,6 +32,7 @@ export interface SettingsState {
     showExpired: boolean;
     expirationWarningDays: number;
     addAnotherItem: boolean;
+    showEmptyCategories: boolean;
   };
 
   // Recipes Settings
@@ -90,6 +91,7 @@ const initialState: SettingsState = {
     showExpired: true,
     expirationWarningDays: 7,
     addAnotherItem: true,
+    showEmptyCategories: false,
   },
   recipesSettings: {
     sortBy: 'alphabetical',

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useAppSelector } from "@/store/hooks";
+import { Category } from "@/store/slices/settingsSlice";
+import React, { useEffect, useState } from "react";
 import {
-  View,
   Modal,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
   ScrollView,
-} from 'react-native';
-import { useAppSelector } from '@/store/hooks';
-import { Category } from '@/store/slices/settingsSlice';
-import { ChopText } from './chop-text';
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { ChopText } from "./chop-text";
 
 interface CategoryModalProps {
   visible: boolean;
@@ -19,19 +19,39 @@ interface CategoryModalProps {
 }
 
 const PRESET_COLORS = [
-  '#FFF9C4', '#C8E6C9', '#FFCDD2', '#FFE0B2',
-  '#B3E5FC', '#D7CCC8', '#F8BBD0', '#FFCCBC',
-  '#FFF59D', '#FFAB91', '#EF9A9A', '#E6EE9C',
-  '#FFECB3', '#FFE082', '#FFCC80', '#C5E1A5',
-  '#B0BEC5', '#F48FB1', '#CE93D8', '#E0E0E0',
+  "#FFF9C4",
+  "#C8E6C9",
+  "#FFCDD2",
+  "#FFE0B2",
+  "#B3E5FC",
+  "#D7CCC8",
+  "#F8BBD0",
+  "#FFCCBC",
+  "#FFF59D",
+  "#FFAB91",
+  "#EF9A9A",
+  "#E6EE9C",
+  "#FFECB3",
+  "#FFE082",
+  "#FFCC80",
+  "#C5E1A5",
+  "#B0BEC5",
+  "#F48FB1",
+  "#CE93D8",
+  "#E0E0E0",
 ];
 
-export function CategoryModal({ visible, onClose, onSave, editCategory }: CategoryModalProps) {
-  const darkMode = useAppSelector(state => state.settings.darkMode);
-  const themeColor = useAppSelector(state => state.settings.themeColor);
+export function CategoryModal({
+  visible,
+  onClose,
+  onSave,
+  editCategory,
+}: CategoryModalProps) {
+  const darkMode = useAppSelector((state) => state.settings.darkMode);
+  const themeColor = useAppSelector((state) => state.settings.themeColor);
 
-  const [name, setName] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#E0E0E0');
+  const [name, setName] = useState("");
+  const [selectedColor, setSelectedColor] = useState("#E0E0E0");
 
   useEffect(() => {
     if (visible) {
@@ -39,8 +59,8 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
         setName(editCategory.name);
         setSelectedColor(editCategory.color);
       } else {
-        setName('');
-        setSelectedColor('#E0E0E0');
+        setName("");
+        setSelectedColor("#E0E0E0");
       }
     }
   }, [editCategory, visible]);
@@ -65,17 +85,27 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
       presentationStyle="pageSheet"
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: darkMode ? '#1c1c1e' : '#fff' }]}>
+        <View
+          style={[
+            styles.modalContent,
+            { backgroundColor: darkMode ? "#1c1c1e" : "#fff" },
+          ]}
+        >
           <View style={styles.modalHeader}>
             <ChopText size="xl" weight="bold">
-              {editCategory ? 'Edit Category' : 'Add Category'}
+              {editCategory ? "Edit Category" : "Add Category"}
             </ChopText>
             <TouchableOpacity onPress={onClose}>
-              <ChopText size="large" variant="muted">✕</ChopText>
+              <ChopText size="large" variant="muted">
+                ✕
+              </ChopText>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
+          <ScrollView
+            style={styles.modalBody}
+            contentContainerStyle={styles.scrollContent}
+          >
             <ChopText size="small" weight="semibold" style={styles.label}>
               Category Name *
             </ChopText>
@@ -83,12 +113,12 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
               style={[
                 styles.input,
                 {
-                  backgroundColor: darkMode ? '#2c2c2e' : '#f0f0f0',
-                  color: darkMode ? '#fff' : '#000',
+                  backgroundColor: darkMode ? "#2c2c2e" : "#f0f0f0",
+                  color: darkMode ? "#fff" : "#000",
                 },
               ]}
               placeholder="e.g., Dairy, Produce, Snacks"
-              placeholderTextColor={darkMode ? '#666' : '#999'}
+              placeholderTextColor={darkMode ? "#666" : "#999"}
               value={name}
               onChangeText={setName}
               autoFocus
@@ -112,7 +142,9 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
                   onPress={() => setSelectedColor(color)}
                 >
                   {selectedColor === color && (
-                    <ChopText size="large" color="#333">✓</ChopText>
+                    <ChopText size="large" color="#333">
+                      ✓
+                    </ChopText>
                   )}
                 </TouchableOpacity>
               ))}
@@ -122,9 +154,11 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
               <ChopText size="small" weight="semibold" style={styles.label}>
                 Preview
               </ChopText>
-              <View style={[styles.preview, { backgroundColor: selectedColor }]}>
+              <View
+                style={[styles.preview, { backgroundColor: selectedColor }]}
+              >
                 <ChopText size="medium" weight="semibold" color="#333">
-                  {name || 'Category Name'}
+                  {name || "Category Name"}
                 </ChopText>
               </View>
             </View>
@@ -132,10 +166,16 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
 
           <View style={styles.modalFooter}>
             <TouchableOpacity
-              style={[styles.button, styles.cancelButton, { backgroundColor: darkMode ? '#2c2c2e' : '#f0f0f0' }]}
+              style={[
+                styles.button,
+                styles.cancelButton,
+                { backgroundColor: darkMode ? "#2c2c2e" : "#f0f0f0" },
+              ]}
               onPress={onClose}
             >
-              <ChopText size="medium" weight="semibold">Cancel</ChopText>
+              <ChopText size="medium" weight="semibold">
+                Cancel
+              </ChopText>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -148,7 +188,7 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
               disabled={!name.trim()}
             >
               <ChopText size="medium" weight="semibold" color="#fff">
-                {editCategory ? 'Update' : 'Add'}
+                {editCategory ? "Update" : "Add"}
               </ChopText>
             </TouchableOpacity>
           </View>
@@ -161,24 +201,27 @@ export function CategoryModal({ visible, onClose, onSave, editCategory }: Catego
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalBody: {
     padding: 20,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   label: {
     marginBottom: 8,
@@ -190,8 +233,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginTop: 8,
   },
@@ -199,10 +242,10 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   previewSection: {
     marginTop: 24,
@@ -213,22 +256,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   modalFooter: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 20,
     gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
   },
   button: {
     flex: 1,
     padding: 16,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  cancelButton: {
-  },
-  saveButton: {
-  },
+  cancelButton: {},
+  saveButton: {},
   disabledButton: {
     opacity: 0.5,
   },
