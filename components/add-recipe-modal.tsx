@@ -133,11 +133,6 @@ export function AddRecipeModal({
       return;
     }
 
-    if (ingredients.length === 0) {
-      Alert.alert("Error", "Please add at least one ingredient");
-      return;
-    }
-
     const servingsNum = parseInt(servings) || 4;
 
     if (editRecipe) {
@@ -283,6 +278,9 @@ export function AddRecipeModal({
       return;
     }
 
+    // Focus the input immediately BEFORE doing anything else to prevent keyboard from closing
+    ingredientNameRef.current?.focus();
+
     if (editingIngredient) {
       // Update existing ingredient
       const updatedIngredients = ingredients.map((ing) =>
@@ -315,11 +313,6 @@ export function AddRecipeModal({
     setNewIngredientName("");
     setNewIngredientQuantity("");
     setNewIngredientUnit("");
-
-    // Keep keyboard open and focus ingredient name input
-    setTimeout(() => {
-      ingredientNameRef.current?.focus();
-    }, 100);
   };
 
   const handleRemoveIngredient = (ingredientId: string) => {
@@ -420,6 +413,7 @@ export function AddRecipeModal({
           ref={scrollViewRef}
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.inputGroup}>
             <ChopText size="small" variant="muted" style={styles.label}>
@@ -491,7 +485,7 @@ export function AddRecipeModal({
 
           <View style={styles.inputGroup}>
             <ChopText size="small" variant="muted" style={styles.label}>
-              Ingredients * ({ingredients.length})
+              Ingredients ({ingredients.length})
             </ChopText>
 
             {/* Current ingredients list */}
@@ -585,7 +579,7 @@ export function AddRecipeModal({
                   placeholderTextColor={darkMode ? "#666" : "#999"}
                   returnKeyType="next"
                   onSubmitEditing={() => ingredientQuantityRef.current?.focus()}
-                  blurOnSubmit={false}
+                  submitBehavior="submit"
                 />
 
                 {/* Pantry suggestions */}

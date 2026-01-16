@@ -4,12 +4,15 @@ import { ChopText } from "@/components/chop-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
+  selectPantryItems,
+  selectShoppingItems,
+} from "@/store/selectors/itemsSelectors";
+import { addItemToList } from "@/store/slices/itemsSlice";
+import {
   Recipe,
   RecipeIngredient,
   removeRecipe,
 } from "@/store/slices/recipesSlice";
-import { addItemToList } from "@/store/slices/itemsSlice";
-import { selectShoppingItems, selectPantryItems } from "@/store/selectors/itemsSelectors";
 import { formatQuantityWithUnit } from "@/utils/unitConversion";
 import React, { useState } from "react";
 import {
@@ -466,8 +469,9 @@ export default function RecipesScreen() {
                               },
                             ]}
                             onPress={() =>
-                              multiSelectMode &&
-                              handleToggleIngredient(ingredient.id)
+                              multiSelectMode
+                                ? handleToggleIngredient(ingredient.id)
+                                : handleLongPressIngredient(ingredient.id)
                             }
                             onLongPress={() =>
                               handleLongPressIngredient(ingredient.id)
@@ -516,7 +520,10 @@ export default function RecipesScreen() {
                                 )}
                               </View>
                               <ChopText size="small" variant="muted">
-                                {formatQuantityWithUnit(ingredient.quantity, ingredient.unit)}
+                                {formatQuantityWithUnit(
+                                  ingredient.quantity,
+                                  ingredient.unit
+                                )}
                               </ChopText>
                             </View>
                           </TouchableOpacity>
