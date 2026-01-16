@@ -23,6 +23,7 @@ export interface SettingsState {
     showCompleted: boolean;
     clearCompletedOnExit: boolean;
     addAnotherItem: boolean;
+    addCompletedToPantry: boolean;
   };
 
   // Pantry List Settings
@@ -82,6 +83,7 @@ const initialState: SettingsState = {
     showCompleted: true,
     clearCompletedOnExit: false,
     addAnotherItem: true,
+    addCompletedToPantry: true,
   },
   pantryListSettings: {
     sortBy: 'category',

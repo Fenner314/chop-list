@@ -247,14 +247,18 @@ const itemsSlice = createSlice({
     },
 
     // Toggle shopping item completion
-    toggleShoppingCompleted: (state, action: PayloadAction<string>) => {
-      const item = state.items.find((i) => i.id === action.payload);
+    toggleShoppingCompleted: (
+      state,
+      action: PayloadAction<{ itemId: string; addToPantry: boolean }>
+    ) => {
+      const { itemId, addToPantry } = action.payload;
+      const item = state.items.find((i) => i.id === itemId);
       if (item && item.lists.shopping) {
         const wasCompleted = item.lists.shopping.completed;
         item.lists.shopping.completed = !wasCompleted;
 
-        // If marking as completed and item is in pantry, add shopping quantity to pantry
-        if (!wasCompleted && item.lists.pantry) {
+        // If marking as completed and item is in pantry, add shopping quantity to pantry (if enabled)
+        if (!wasCompleted && addToPantry && item.lists.pantry) {
           // Get the list-specific units (fallback to item unit if not set)
           const shoppingUnit = item.lists.shopping.unit !== undefined
             ? item.lists.shopping.unit

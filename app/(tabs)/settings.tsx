@@ -11,6 +11,7 @@ import {
   setThemeColor,
   updateCategory,
   updateRecipesSettings,
+  updateShoppingListSettings,
 } from "@/store/slices/settingsSlice";
 import React, { useState } from "react";
 import {
@@ -37,6 +38,7 @@ export default function SettingsScreen() {
     Category | undefined
   >();
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const [shoppingListExpanded, setShoppingListExpanded] = useState(false);
   const [recipesExpanded, setRecipesExpanded] = useState(false);
 
   const fontSizeValue =
@@ -317,7 +319,10 @@ export default function SettingsScreen() {
               Feature Settings
             </Text>
 
-            <TouchableOpacity style={styles.settingButton}>
+            <TouchableOpacity
+              style={styles.settingButton}
+              onPress={() => setShoppingListExpanded(!shoppingListExpanded)}
+            >
               <Text
                 style={[
                   styles.settingButtonText,
@@ -330,11 +335,50 @@ export default function SettingsScreen() {
                 Shopping List Settings
               </Text>
               <AnimatedCaret
-                isExpanded={false} // TODO: implement expansion
+                isExpanded={shoppingListExpanded}
                 color={darkMode ? "#666" : "#999"}
                 size={24}
               />
             </TouchableOpacity>
+
+            {shoppingListExpanded && (
+              <View style={styles.expandedContent}>
+                <View style={styles.settingRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.settingLabel,
+                        {
+                          fontSize: fontSizeValue,
+                          color: darkMode ? "#fff" : "#333",
+                        },
+                      ]}
+                    >
+                      Add Completed Items to Pantry
+                    </Text>
+                    <Text
+                      style={[
+                        styles.settingDescription,
+                        {
+                          fontSize: fontSizeValue - 2,
+                          color: darkMode ? "#999" : "#666",
+                        },
+                      ]}
+                    >
+                      Automatically add shopping list quantities to pantry when marked complete
+                    </Text>
+                  </View>
+                  <Switch
+                    value={settings.shoppingListSettings.addCompletedToPantry}
+                    onValueChange={(value) =>
+                      dispatch(updateShoppingListSettings({ addCompletedToPantry: value }))
+                    }
+                    trackColor={{ false: "#767577", true: themeColor }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              </View>
+            )}
 
             <TouchableOpacity style={styles.settingButton}>
               <Text
@@ -518,6 +562,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   settingLabel: {},
+  settingDescription: {
+    marginTop: 4,
+  },
   colorPickerContainer: {
     flexDirection: "row",
     flexWrap: "wrap",

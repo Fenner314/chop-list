@@ -37,6 +37,7 @@ export default function ShoppingListScreen() {
   const darkMode = useAppSelector(state => state.settings.darkMode);
   const themeColor = useAppSelector(state => state.settings.themeColor);
   const sortBy = useAppSelector(state => state.settings.shoppingListSettings.sortBy);
+  const addCompletedToPantry = useAppSelector(state => state.settings.shoppingListSettings.addCompletedToPantry);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editItem, setEditItem] = useState<Item | undefined>();
@@ -206,7 +207,7 @@ export default function ShoppingListScreen() {
       }
     } else {
       // Toggle completed status
-      dispatch(toggleShoppingCompleted(item.id));
+      dispatch(toggleShoppingCompleted({ itemId: item.id, addToPantry: addCompletedToPantry }));
     }
   };
 
@@ -402,7 +403,7 @@ export default function ShoppingListScreen() {
             styles.itemContainer,
             { borderBottomColor: darkMode ? '#333' : '#eee' },
           ]}
-          onPress={() => dispatch(toggleShoppingCompleted(item.id))}
+          onPress={() => dispatch(toggleShoppingCompleted({ itemId: item.id, addToPantry: addCompletedToPantry }))}
         >
           <View style={styles.checkbox}>
             <IconSymbol
