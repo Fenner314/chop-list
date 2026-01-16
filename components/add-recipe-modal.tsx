@@ -60,6 +60,7 @@ export function AddRecipeModal({
   const servingsRef = useRef<TextInput>(null);
   const ingredientNameRef = useRef<TextInput>(null);
   const ingredientQuantityRef = useRef<TextInput>(null);
+  const quantityRowRef = useRef<View>(null);
 
   // New ingredient form
   const [newIngredientName, setNewIngredientName] = useState("");
@@ -70,6 +71,7 @@ export function AddRecipeModal({
   // Edit ingredient
   const [editingIngredient, setEditingIngredient] =
     useState<RecipeIngredient | null>(null);
+  const [scrollY, setScrollY] = useState(0);
 
   // Filter pantry items for suggestions
   const suggestedItems = newIngredientName.trim()
@@ -414,6 +416,10 @@ export function AddRecipeModal({
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
+          onScroll={(event) => {
+            setScrollY(event.nativeEvent.contentOffset.y);
+          }}
+          scrollEventThrottle={16}
         >
           <View style={styles.inputGroup}>
             <ChopText size="small" variant="muted" style={styles.label}>
@@ -575,6 +581,15 @@ export function AddRecipeModal({
                     setNewIngredientName(text);
                     setShowSuggestions(text.trim().length > 0);
                   }}
+                  onFocus={() => {
+                    // Scroll down just enough to reveal the quantity input row
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollTo({
+                        y: scrollY + 60,
+                        animated: true,
+                      });
+                    }, 50);
+                  }}
                   placeholder="Ingredient name"
                   placeholderTextColor={darkMode ? "#666" : "#999"}
                   returnKeyType="next"
@@ -617,7 +632,7 @@ export function AddRecipeModal({
                   </View>
                 )}
 
-                <View style={styles.quantityUnitAddRow}>
+                <View ref={quantityRowRef} style={styles.quantityUnitAddRow}>
                   <TextInput
                     ref={ingredientQuantityRef}
                     style={[
