@@ -6,7 +6,6 @@ import {
   getSuggestedCategories,
 } from "@/utils/categorization";
 import { ALL_UNITS } from "@/utils/unitConversion";
-import RNPickerSelect from "react-native-picker-select";
 import React, { useEffect, useState } from "react";
 import {
   Modal,
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import RNPickerSelect from "react-native-picker-select";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChopText } from "./chop-text";
 import { IconSymbol } from "./ui/icon-symbol";
@@ -49,7 +49,11 @@ export function AddShoppingItemModal({
     if (editItem) {
       setName(editItem.name);
       setQuantity(editItem.lists.shopping?.quantity || editItem.quantity);
-      setUnit(editItem.lists.shopping?.unit !== undefined ? editItem.lists.shopping.unit : (editItem.unit || ""));
+      setUnit(
+        editItem.lists.shopping?.unit !== undefined
+          ? editItem.lists.shopping.unit
+          : editItem.unit || ""
+      );
       setSelectedCategory(editItem.category);
     } else {
       setName("");
@@ -139,9 +143,14 @@ export function AddShoppingItemModal({
               Cancel
             </ChopText>
           </TouchableOpacity>
-          <ChopText size="large" weight="semibold">
-            {editItem ? "Edit Item" : "Add Item"}
-          </ChopText>
+          <View style={styles.center}>
+            <ChopText size="large" weight="semibold">
+              {editItem ? "Edit Item" : "Add Item"}
+            </ChopText>
+            <ChopText size="small" weight="semibold">
+              Shopping List
+            </ChopText>
+          </View>
           <TouchableOpacity onPress={handleSave}>
             <ChopText variant="theme" size="large" weight="semibold">
               {editItem ? "Update" : "Add"}
@@ -319,6 +328,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
+  center: { alignItems: "center" },
   content: {
     flex: 1,
     padding: 20,

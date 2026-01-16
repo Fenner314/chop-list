@@ -178,9 +178,14 @@ export function AddPantryItemModal({
               Cancel
             </ChopText>
           </TouchableOpacity>
-          <ChopText size="large" weight="semibold">
-            {editItem ? "Edit Item" : "Add Item"}
-          </ChopText>
+          <View style={styles.center}>
+            <ChopText size="large" weight="semibold">
+              {editItem ? "Edit Item" : "Add Item"}
+            </ChopText>
+            <ChopText size="small" weight="semibold">
+              Pantry List
+            </ChopText>
+          </View>
           <TouchableOpacity onPress={handleSave}>
             <ChopText variant="theme" size="large" weight="semibold">
               {editItem ? "Update" : "Add"}
@@ -398,6 +403,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
+  center: { alignItems: "center" },
   content: {
     flex: 1,
     padding: 20,
