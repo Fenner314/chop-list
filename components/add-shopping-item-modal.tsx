@@ -6,7 +6,7 @@ import {
   getSuggestedCategories,
 } from "@/utils/categorization";
 import { ALL_UNITS } from "@/utils/unitConversion";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -44,6 +44,7 @@ export function AddShoppingItemModal({
   const [unit, setUnit] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState("other");
   const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
+  const categoryScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (editItem) {
@@ -70,11 +71,28 @@ export function AddShoppingItemModal({
       setSelectedCategory(autoCategory);
       const suggestions = getSuggestedCategories(name);
       setSuggestedCategories(suggestions);
+
+      // Only scroll if we actually detected a category (not just "other")
+      if (autoCategory !== "other" && suggestions.length > 0) {
+        setTimeout(() => {
+          const categoryIndex = categories.findIndex(
+            (cat) => cat.id === autoCategory
+          );
+          if (categoryIndex !== -1 && categoryScrollRef.current) {
+            // Scroll to make the category visible on the left
+            // Each category chip is approximately 100px wide with margins
+            categoryScrollRef.current.scrollTo({
+              x: categoryIndex * 100,
+              animated: true,
+            });
+          }
+        }, 100);
+      }
     } else if (editItem) {
       // Clear suggestions when editing
       setSuggestedCategories([]);
     }
-  }, [name, editItem]);
+  }, [name, editItem, categories]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -237,6 +255,7 @@ export function AddShoppingItemModal({
               Category {suggestedCategories.length > 0 && "(Auto-detected)"}
             </ChopText>
             <ScrollView
+              ref={categoryScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.categoryScroll}
