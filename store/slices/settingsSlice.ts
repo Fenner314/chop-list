@@ -1,3 +1,4 @@
+import { IconFamily } from "@/components/dynamic-icon";
 import { DEFAULT_CATEGORIES } from "@/constants/default-categories";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
@@ -6,6 +7,7 @@ export interface Category {
   name: string;
   color: string;
   icon?: string;
+  iconFamily?: IconFamily;
 }
 
 export interface SettingsState {
@@ -87,9 +89,10 @@ const settingsSlice = createSlice({
   reducers: {
     // Initialize categories if they don't exist (for migration from old state)
     initializeCategories: (state) => {
-      // if (!state.categories || state.categories.length === 0) {
-      state.categories = DEFAULT_CATEGORIES;
-      // }
+      console.log(state.categories);
+      if (!state.categories || state.categories.length === 0) {
+        state.categories = DEFAULT_CATEGORIES;
+      }
     },
     setThemeColor: (state, action: PayloadAction<string>) => {
       state.themeColor = action.payload;

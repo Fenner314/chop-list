@@ -3,7 +3,7 @@ import { FOOD_ICONS, getIconFamily } from "@/constants/food-icons";
 import { PRESET_COLORS } from "@/constants/preset-colors";
 import { useAppSelector } from "@/store/hooks";
 import { Category } from "@/store/slices/settingsSlice";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -68,11 +68,26 @@ export function CategoryModal({
   };
 
   // Filter icons based on search query
-  const filteredIcons = iconSearchQuery.trim()
-    ? FOOD_ICONS.filter((icon) =>
-        icon.name.toLowerCase().includes(iconSearchQuery.toLowerCase())
-      )
-    : FOOD_ICONS;
+  const filteredIcons = useMemo(() => {
+    const baseList = iconSearchQuery.trim()
+      ? FOOD_ICONS.filter((icon) =>
+          icon.name.toLowerCase().includes(iconSearchQuery.toLowerCase())
+        )
+      : FOOD_ICONS;
+
+    if (!selectedIcon) return baseList;
+
+    // Find the selected icon and move it to the front
+    const selectedIconData = baseList.find(
+      (icon) => icon.name === selectedIcon
+    );
+    if (!selectedIconData) return baseList;
+
+    return [
+      selectedIconData,
+      ...baseList.filter((icon) => icon.name !== selectedIcon),
+    ];
+  }, [iconSearchQuery, selectedIcon]);
 
   return (
     <Modal
