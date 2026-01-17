@@ -1,6 +1,9 @@
+import { DynamicIcon } from "@/components/dynamic-icon";
+import { FOOD_ICONS, getIconFamily } from "@/constants/food-icons";
+import { PRESET_COLORS } from "@/constants/preset-colors";
 import { useAppSelector } from "@/store/hooks";
 import { Category } from "@/store/slices/settingsSlice";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -18,29 +21,6 @@ interface CategoryModalProps {
   editCategory?: Category;
 }
 
-const PRESET_COLORS = [
-  "#FFF9C4",
-  "#C8E6C9",
-  "#FFCDD2",
-  "#FFE0B2",
-  "#B3E5FC",
-  "#D7CCC8",
-  "#F8BBD0",
-  "#FFCCBC",
-  "#FFF59D",
-  "#FFAB91",
-  "#EF9A9A",
-  "#E6EE9C",
-  "#FFECB3",
-  "#FFE082",
-  "#FFCC80",
-  "#C5E1A5",
-  "#B0BEC5",
-  "#F48FB1",
-  "#CE93D8",
-  "#E0E0E0",
-];
-
 export function CategoryModal({
   visible,
   onClose,
@@ -50,18 +30,28 @@ export function CategoryModal({
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [scrollY, setScrollY] = useState(0);
+
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState("#E0E0E0");
+  const [selectedIcon, setSelectedIcon] = useState<string | undefined>(
+    undefined
+  );
+  const [iconSearchQuery, setIconSearchQuery] = useState("");
 
   useEffect(() => {
     if (visible) {
       if (editCategory) {
         setName(editCategory.name);
         setSelectedColor(editCategory.color);
+        setSelectedIcon(editCategory.icon);
       } else {
         setName("");
         setSelectedColor("#E0E0E0");
+        setSelectedIcon(undefined);
       }
+      setIconSearchQuery("");
     }
   }, [editCategory, visible]);
 
@@ -71,10 +61,18 @@ export function CategoryModal({
     onSave({
       name: name.trim(),
       color: selectedColor,
+      icon: selectedIcon,
     });
 
     onClose();
   };
+
+  // Filter icons based on search query
+  const filteredIcons = iconSearchQuery.trim()
+    ? FOOD_ICONS.filter((icon) =>
+        icon.name.toLowerCase().includes(iconSearchQuery.toLowerCase())
+      )
+    : FOOD_ICONS;
 
   return (
     <Modal
@@ -103,8 +101,13 @@ export function CategoryModal({
           </View>
 
           <ScrollView
+            ref={scrollViewRef}
             style={styles.modalBody}
             contentContainerStyle={styles.scrollContent}
+            onScroll={(event) => {
+              setScrollY(event.nativeEvent.contentOffset.y);
+            }}
+            scrollEventThrottle={16}
           >
             <ChopText size="small" weight="semibold" style={styles.label}>
               Category Name *
@@ -121,7 +124,7 @@ export function CategoryModal({
               placeholderTextColor={darkMode ? "#666" : "#999"}
               value={name}
               onChangeText={setName}
-              autoFocus
+              autoFocus={!editCategory}
             />
 
             <ChopText size="small" weight="semibold" style={styles.label}>
@@ -150,6 +153,82 @@ export function CategoryModal({
               ))}
             </View>
 
+            <ChopText size="small" weight="semibold" style={styles.label}>
+              Category Icon (Optional)
+            </ChopText>
+            <TextInput
+              style={[
+                styles.input,
+                styles.iconSearchInput,
+                {
+                  backgroundColor: darkMode ? "#2c2c2e" : "#f0f0f0",
+                  color: darkMode ? "#fff" : "#000",
+                },
+              ]}
+              placeholder="Search icons..."
+              placeholderTextColor={darkMode ? "#666" : "#999"}
+              value={iconSearchQuery}
+              onChangeText={setIconSearchQuery}
+              onFocus={() => {
+                // Scroll down to reveal the icon grid
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({
+                    y: scrollY + 100,
+                    animated: true,
+                  });
+                }, 200);
+              }}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.iconScroll}
+              contentContainerStyle={styles.iconScrollContent}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.iconOption,
+                  {
+                    backgroundColor: darkMode ? "#2c2c2e" : "#f0f0f0",
+                    borderColor:
+                      selectedIcon === undefined ? themeColor : "transparent",
+                  },
+                  selectedIcon === undefined && {
+                    borderWidth: 3,
+                  },
+                ]}
+                onPress={() => setSelectedIcon(undefined)}
+              >
+                <ChopText size="xs" variant="muted">
+                  None
+                </ChopText>
+              </TouchableOpacity>
+              {filteredIcons.map((icon) => (
+                <TouchableOpacity
+                  key={`${icon.name}-${icon.family}`}
+                  style={[
+                    styles.iconOption,
+                    {
+                      backgroundColor: darkMode ? "#2c2c2e" : "#f0f0f0",
+                      borderColor:
+                        selectedIcon === icon.name ? themeColor : "transparent",
+                    },
+                    selectedIcon === icon.name && {
+                      borderWidth: 3,
+                    },
+                  ]}
+                  onPress={() => setSelectedIcon(icon.name)}
+                >
+                  <DynamicIcon
+                    family={icon.family}
+                    name={icon.name}
+                    size={28}
+                    color={darkMode ? "#fff" : "#333"}
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
             <View style={styles.previewSection}>
               <ChopText size="small" weight="semibold" style={styles.label}>
                 Preview
@@ -157,9 +236,20 @@ export function CategoryModal({
               <View
                 style={[styles.preview, { backgroundColor: selectedColor }]}
               >
-                <ChopText size="medium" weight="semibold" color="#333">
-                  {name || "Category Name"}
-                </ChopText>
+                <View style={styles.previewContent}>
+                  {selectedIcon && (
+                    <DynamicIcon
+                      family={getIconFamily(selectedIcon)}
+                      name={selectedIcon}
+                      size={24}
+                      color="#333"
+                      style={styles.previewIcon}
+                    />
+                  )}
+                  <ChopText size="medium" weight="semibold" color="#333">
+                    {name || "Category Name"}
+                  </ChopText>
+                </View>
               </View>
             </View>
           </ScrollView>
@@ -232,6 +322,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
   },
+  iconSearchInput: {
+    marginBottom: 8,
+  },
   colorGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -254,6 +347,29 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginTop: 8,
+  },
+  previewContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  previewIcon: {
+    marginRight: 8,
+  },
+  iconScroll: {
+    marginTop: 8,
+  },
+  iconScrollContent: {
+    paddingRight: 12,
+  },
+  iconOption: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+    borderWidth: 2,
+    borderColor: "transparent",
   },
   modalFooter: {
     flexDirection: "row",

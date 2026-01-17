@@ -3,6 +3,8 @@ import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { DynamicIcon } from '@/components/dynamic-icon';
+import { getIconFamily } from '@/constants/food-icons';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import {
   Item,
@@ -24,7 +26,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 
 // Type for list items that includes both items and category headers
 type ListItem =
-  | { type: 'category'; categoryId: string; title: string; color: string; itemCount: number }
+  | { type: 'category'; categoryId: string; title: string; color: string; icon?: string; itemCount: number }
   | { type: 'item'; item: Item; categoryId: string }
   | { type: 'completedHeader' }
   | { type: 'completedItem'; item: Item };
@@ -98,6 +100,7 @@ export default function ShoppingListScreen() {
           categoryId: category.id,
           title: category.name,
           color: category.color,
+          icon: category.icon,
           itemCount: categoryItems.length,
         });
 
@@ -342,6 +345,15 @@ export default function ShoppingListScreen() {
             style={styles.categoryHeaderMain}
             onPress={() => toggleCategory(listItem.categoryId)}
           >
+            {listItem.icon && (
+              <DynamicIcon
+                family={getIconFamily(listItem.icon)}
+                name={listItem.icon}
+                size={32}
+                color="#333"
+                style={styles.categoryIcon}
+              />
+            )}
             <View style={styles.categoryHeaderContent}>
               <ChopText size="medium" weight="semibold" color="#333">
                 {listItem.title}
@@ -662,6 +674,9 @@ const styles = StyleSheet.create({
   },
   categoryHeaderContent: {
     flex: 1,
+  },
+  categoryIcon: {
+    marginRight: 12,
   },
   completedHeader: {
     marginTop: 16,

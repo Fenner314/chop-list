@@ -39,6 +39,8 @@ import DraggableFlatList, {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { DynamicIcon } from "@/components/dynamic-icon";
+import { getIconFamily } from "@/constants/food-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Type for list items that includes both items and category headers
@@ -48,6 +50,7 @@ type ListItem =
       categoryId: string;
       title: string;
       color: string;
+      icon?: string;
       itemCount: number;
     }
   | { type: "item"; item: Item; categoryId: string };
@@ -133,6 +136,7 @@ export default function PantryListScreen() {
           categoryId: category.id,
           title: category.name,
           color: category.color,
+          icon: category.icon,
           itemCount: categoryItems.length,
         });
 
@@ -512,6 +516,15 @@ export default function PantryListScreen() {
             style={styles.categoryHeaderMain}
             onPress={() => toggleCategory(listItem.categoryId)}
           >
+            {listItem.icon && (
+              <DynamicIcon
+                family={getIconFamily(listItem.icon)}
+                name={listItem.icon}
+                size={32}
+                color="#333"
+                style={styles.categoryIcon}
+              />
+            )}
             <View style={styles.categoryHeaderContent}>
               <ChopText size="medium" weight="semibold" color="#333">
                 {listItem.title}
@@ -973,6 +986,9 @@ const styles = StyleSheet.create({
   },
   categoryHeaderContent: {
     flex: 1,
+  },
+  categoryIcon: {
+    marginRight: 12,
   },
   categoryEditButton: {
     padding: 12,
