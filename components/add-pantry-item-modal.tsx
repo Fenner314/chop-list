@@ -464,6 +464,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
     borderWidth: 2,
     borderColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
   },
   selectedChip: {
     borderColor: "#007AFF",
