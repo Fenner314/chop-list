@@ -20,6 +20,9 @@ export interface SettingsState {
   // Categories for items
   categories: Category[];
 
+  // Item name history for autocomplete
+  itemNameHistory: string[];
+
   // Shopping List Settings
   shoppingListSettings: {
     sortBy: "manual" | "alphabetical" | "category";
@@ -58,6 +61,7 @@ const initialState: SettingsState = {
   darkMode: false,
   lastVisitedTab: "pantry-list",
   categories: DEFAULT_CATEGORIES,
+  itemNameHistory: [],
   shoppingListSettings: {
     sortBy: "manual",
     showCompleted: true,
@@ -162,6 +166,23 @@ const settingsSlice = createSlice({
     ) => {
       state.accountSettings = { ...state.accountSettings, ...action.payload };
     },
+    addToItemNameHistory: (state, action: PayloadAction<string>) => {
+      const itemName = action.payload.trim();
+      if (!itemName) return;
+
+      // Initialize if undefined (for migration from old state)
+      if (!state.itemNameHistory) {
+        state.itemNameHistory = [];
+      }
+
+      // Remove if it already exists (case-insensitive)
+      const filtered = state.itemNameHistory.filter(
+        (name) => name.toLowerCase() !== itemName.toLowerCase()
+      );
+
+      // Add to front
+      state.itemNameHistory = [itemName, ...filtered].slice(0, 100);
+    },
   },
 });
 
@@ -178,6 +199,7 @@ export const {
   updatePantryListSettings,
   updateRecipesSettings,
   updateAccountSettings,
+  addToItemNameHistory,
 } = settingsSlice.actions;
 
 export default settingsSlice.reducer;

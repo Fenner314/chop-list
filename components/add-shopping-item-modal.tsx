@@ -1,10 +1,14 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { Item, addItemToList, updateItem } from "@/store/slices/itemsSlice";
-import { updateShoppingListSettings } from "@/store/slices/settingsSlice";
+import {
+  addToItemNameHistory,
+  updateShoppingListSettings,
+} from "@/store/slices/settingsSlice";
 import {
   autoCategorizeItem,
   getSuggestedCategories,
 } from "@/utils/categorization";
+import { getItemNameSuggestions } from "@/utils/itemSuggestions";
 import { ALL_UNITS } from "@/utils/unitConversion";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -38,12 +42,17 @@ export function AddShoppingItemModal({
     (state) => state.settings.shoppingListSettings.addAnotherItem
   );
   const themeColor = useAppSelector((state) => state.settings.themeColor);
+  const items = useAppSelector((state) => state.items.items);
+  const itemNameHistory = useAppSelector(
+    (state) => state.settings.itemNameHistory || []
+  );
 
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState("other");
   const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const categoryScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -64,6 +73,21 @@ export function AddShoppingItemModal({
       setSuggestedCategories([]);
     }
   }, [editItem, visible]);
+
+  // Update item name suggestions as user types
+  useEffect(() => {
+    if (name.trim() && !editItem) {
+      const suggestions = getItemNameSuggestions(
+        name,
+        items,
+        itemNameHistory,
+        4
+      );
+      setNameSuggestions(suggestions);
+    } else {
+      setNameSuggestions([]);
+    }
+  }, [name, items, itemNameHistory, editItem]);
 
   useEffect(() => {
     if (name.trim() && !editItem) {
@@ -99,6 +123,9 @@ export function AddShoppingItemModal({
       return;
     }
 
+    // Add to item name history
+    dispatch(addToItemNameHistory(name.trim()));
+
     if (editItem) {
       // Update shopping list item properties
       dispatch(
@@ -129,6 +156,7 @@ export function AddShoppingItemModal({
         setName("");
         setQuantity("");
         setSuggestedCategories([]);
+        setNameSuggestions([]);
         // Keep the category as "other" for next item
         setSelectedCategory("other");
       } else {
@@ -195,6 +223,27 @@ export function AddShoppingItemModal({
               placeholderTextColor={darkMode ? "#666" : "#999"}
               autoFocus
             />
+            {nameSuggestions.length > 0 && !editItem && (
+              <View style={styles.suggestionsContainer}>
+                {nameSuggestions.map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.suggestionChip,
+                      {
+                        backgroundColor: darkMode ? "#333" : "#e8e8e8",
+                      },
+                    ]}
+                    onPress={() => {
+                      setName(suggestion);
+                      setNameSuggestions([]);
+                    }}
+                  >
+                    <ChopText size="small">{suggestion}</ChopText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -380,6 +429,17 @@ const styles = StyleSheet.create({
   },
   categoryScroll: {
     marginTop: 8,
+  },
+  suggestionsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  suggestionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   categoryChip: {
     paddingHorizontal: 16,
