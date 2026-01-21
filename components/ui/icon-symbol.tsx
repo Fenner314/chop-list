@@ -30,6 +30,19 @@ const MAPPING = {
   "line.horizontal.3": "drag-handle",
   "xmark.circle.fill": "cancel",
   checkmark: "check",
+  "eye.fill": "visibility",
+  "eye.slash.fill": "visibility-off",
+  "envelope.fill": "email",
+  "lock.fill": "lock",
+  "person.fill": "person",
+  "chevron.left": "chevron-left",
+  "crown.fill": "stars",
+  "envelope.badge.fill": "mark-email-unread",
+  "person.crop.circle.badge.questionmark": "help-outline",
+  "person.circle.fill": "account-circle",
+  "person.circle": "account-circle",
+  "rectangle.portrait.and.arrow.right": "logout",
+  "person.badge.plus": "person-add",
 } as IconMapping;
 
 /**

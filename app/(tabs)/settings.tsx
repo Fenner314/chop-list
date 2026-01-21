@@ -1,7 +1,11 @@
 import { AnimatedCaret } from "@/components/animated-caret";
 import { CategoryModal } from "@/components/category-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { SpaceSwitcher } from "@/components/sharing/SpaceSwitcher";
+import { PendingInvitesModal } from "@/components/sharing/PendingInvitesModal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "expo-router";
 import {
   addCategory,
   Category,
@@ -31,6 +35,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { user, isAuthenticated, signOut } = useAuth();
   const settings = useAppSelector((state) => state.settings);
   const { themeColor, fontSize, darkMode, categories } = settings;
 
@@ -42,6 +48,8 @@ export default function SettingsScreen() {
   const [shoppingListExpanded, setShoppingListExpanded] = useState(false);
   const [pantryListExpanded, setPantryListExpanded] = useState(false);
   const [recipesExpanded, setRecipesExpanded] = useState(false);
+  const [accountExpanded, setAccountExpanded] = useState(false);
+  const [invitesModalVisible, setInvitesModalVisible] = useState(false);
 
   const fontSizeValue =
     fontSize === "small" ? 14 : fontSize === "large" ? 20 : 16;
@@ -528,27 +536,133 @@ export default function SettingsScreen() {
                 },
               ]}
             >
+              Sharing & Sync
+            </Text>
+
+            <SpaceSwitcher
+              onInvitesPress={() => setInvitesModalVisible(true)}
+              onSignInPress={() => setAccountExpanded(true)}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.section,
+              { borderBottomColor: darkMode ? "#333" : "#eee" },
+            ]}
+          >
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  fontSize: fontSizeValue + 2,
+                  color: darkMode ? "#fff" : "#333",
+                },
+              ]}
+            >
               Account
             </Text>
 
-            <TouchableOpacity style={styles.settingButton}>
-              <Text
-                style={[
-                  styles.settingButtonText,
-                  {
-                    fontSize: fontSizeValue,
-                    color: darkMode ? "#fff" : "#333",
-                  },
-                ]}
-              >
-                Account Settings
-              </Text>
+            <TouchableOpacity
+              style={styles.settingButton}
+              onPress={() => setAccountExpanded(!accountExpanded)}
+            >
+              <View style={styles.accountInfo}>
+                <IconSymbol
+                  name={isAuthenticated ? "person.circle.fill" : "person.circle"}
+                  size={24}
+                  color={themeColor}
+                />
+                <View style={styles.accountText}>
+                  <Text
+                    style={[
+                      styles.settingButtonText,
+                      {
+                        fontSize: fontSizeValue,
+                        color: darkMode ? "#fff" : "#333",
+                      },
+                    ]}
+                  >
+                    {isAuthenticated ? user?.displayName || "Signed In" : "Not Signed In"}
+                  </Text>
+                  {isAuthenticated && user?.email && (
+                    <Text
+                      style={[
+                        styles.accountEmail,
+                        {
+                          fontSize: fontSizeValue - 2,
+                          color: darkMode ? "#666" : "#999",
+                        },
+                      ]}
+                    >
+                      {user.email}
+                    </Text>
+                  )}
+                </View>
+              </View>
               <AnimatedCaret
-                isExpanded={false} // TODO: implement expansion
+                isExpanded={accountExpanded}
                 color={darkMode ? "#666" : "#999"}
                 size={24}
               />
             </TouchableOpacity>
+
+            {accountExpanded && (
+              <View style={styles.expandedContent}>
+                {isAuthenticated ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.signOutButton,
+                      { backgroundColor: darkMode ? "#331111" : "#ffeeee" },
+                    ]}
+                    onPress={() => {
+                      Alert.alert(
+                        "Sign Out",
+                        "Are you sure you want to sign out?",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Sign Out",
+                            style: "destructive",
+                            onPress: async () => {
+                              await signOut();
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color="#ff3b30" />
+                    <Text
+                      style={[
+                        styles.signOutText,
+                        { fontSize: fontSizeValue },
+                      ]}
+                    >
+                      Sign Out
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.signInButton,
+                      { backgroundColor: themeColor },
+                    ]}
+                    onPress={() => router.push("/(auth)/login")}
+                  >
+                    <IconSymbol name="person.badge.plus" size={20} color="#fff" />
+                    <Text
+                      style={[
+                        styles.signInText,
+                        { fontSize: fontSizeValue },
+                      ]}
+                    >
+                      Sign In or Create Account
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
 
           <View
@@ -580,6 +694,11 @@ export default function SettingsScreen() {
         }}
         onSave={handleSaveCategory}
         editCategory={editingCategory}
+      />
+
+      <PendingInvitesModal
+        visible={invitesModalVisible}
+        onClose={() => setInvitesModalVisible(false)}
       />
     </SafeAreaView>
   );
@@ -729,5 +848,37 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     textAlign: "center",
     paddingHorizontal: 8,
+  },
+  accountInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  accountText: {},
+  accountEmail: {},
+  signOutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  signOutText: {
+    color: "#ff3b30",
+    fontWeight: "500",
+  },
+  signInButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  signInText: {
+    color: "#fff",
+    fontWeight: "600",
   },
 });

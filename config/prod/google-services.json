@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "687781052000",
+    "project_id": "chop-list-share",
+    "storage_bucket": "chop-list-share.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:687781052000:android:391c37161f925e3819cd05",
+        "android_client_info": {
+          "package_name": "com.choplist.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsvZQd-bTbS-cmz3Hl20-QYHdxTTYbUU4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

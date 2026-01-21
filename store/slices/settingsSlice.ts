@@ -1,6 +1,7 @@
 import { IconFamily } from "@/components/dynamic-icon";
 import { DEFAULT_CATEGORIES } from "@/constants/default-categories";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { AvailableSpace } from "@/types/firebase";
 
 export interface Category {
   id: string;
@@ -9,6 +10,8 @@ export interface Category {
   icon?: string;
   iconFamily?: IconFamily;
 }
+
+export type SyncStatus = "local" | "syncing" | "synced" | "error";
 
 export interface SettingsState {
   // General Settings
@@ -53,6 +56,12 @@ export interface SettingsState {
     email: string;
     syncEnabled: boolean;
   };
+
+  // Sharing & Sync Settings
+  sharingEnabled: boolean; // User explicitly enabled sharing
+  currentSpaceId: string | null;
+  availableSpaces: AvailableSpace[];
+  syncStatus: SyncStatus;
 }
 
 const initialState: SettingsState = {
@@ -85,6 +94,11 @@ const initialState: SettingsState = {
     email: "",
     syncEnabled: false,
   },
+  // Sharing & Sync
+  sharingEnabled: false,
+  currentSpaceId: null,
+  availableSpaces: [],
+  syncStatus: "local",
 };
 
 const settingsSlice = createSlice({
@@ -183,6 +197,24 @@ const settingsSlice = createSlice({
       // Add to front
       state.itemNameHistory = [itemName, ...filtered].slice(0, 100);
     },
+    // Sharing & Sync actions
+    setSharingEnabled: (state, action: PayloadAction<boolean>) => {
+      state.sharingEnabled = action.payload;
+      if (!action.payload) {
+        // When disabling sharing, reset sync state
+        state.currentSpaceId = null;
+        state.syncStatus = "local";
+      }
+    },
+    setCurrentSpaceId: (state, action: PayloadAction<string | null>) => {
+      state.currentSpaceId = action.payload;
+    },
+    setAvailableSpaces: (state, action: PayloadAction<AvailableSpace[]>) => {
+      state.availableSpaces = action.payload;
+    },
+    setSyncStatus: (state, action: PayloadAction<SyncStatus>) => {
+      state.syncStatus = action.payload;
+    },
   },
 });
 
@@ -200,6 +232,10 @@ export const {
   updateRecipesSettings,
   updateAccountSettings,
   addToItemNameHistory,
+  setSharingEnabled,
+  setCurrentSpaceId,
+  setAvailableSpaces,
+  setSyncStatus,
 } = settingsSlice.actions;
 
 export default settingsSlice.reducer;

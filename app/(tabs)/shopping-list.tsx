@@ -23,6 +23,7 @@ import { ChopText } from '@/components/chop-text';
 import { AddShoppingItemModal } from '@/components/add-shopping-item-modal';
 import { SearchInput } from '@/components/search-input';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SyncStatusIndicator } from '@/components/sync-status-indicator';
 
 // Type for list items that includes both items and category headers
 type ListItem =
@@ -527,9 +528,12 @@ export default function ShoppingListScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <ChopText size="xxl" weight="bold" variant="theme" style={styles.title}>
-              Shopping List
-            </ChopText>
+            <View style={styles.titleRow}>
+              <ChopText size="xxl" weight="bold" variant="theme">
+                Shopping List
+              </ChopText>
+              <SyncStatusIndicator />
+            </View>
 
             {/* Search Bar */}
             <SearchInput
@@ -628,7 +632,10 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
   },
-  title: {
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
   multiSelectToolbar: {

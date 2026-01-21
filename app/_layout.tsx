@@ -7,6 +7,8 @@ import { PersistGate } from 'redux-persist/integration/react';
 
 import { store, persistor, RootState } from '@/store';
 import { CustomSplashScreen } from '@/components/splash-screen';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { SyncProvider } from '@/contexts/SyncContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -19,6 +21,7 @@ function RootLayoutContent() {
     <ThemeProvider value={darkMode ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style={darkMode ? 'light' : 'dark'} />
@@ -30,7 +33,11 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <PersistGate loading={<CustomSplashScreen />} persistor={persistor}>
-        <RootLayoutContent />
+        <AuthProvider>
+          <SyncProvider>
+            <RootLayoutContent />
+          </SyncProvider>
+        </AuthProvider>
       </PersistGate>
     </Provider>
   );

@@ -94,6 +94,10 @@ const recipesSlice = createSlice({
     clearAll: (state) => {
       state.recipes = [];
     },
+    // Set all recipes (for sync from Firebase)
+    setAllRecipes: (state, action: PayloadAction<Recipe[]>) => {
+      state.recipes = action.payload;
+    },
   },
 });
 
@@ -106,6 +110,7 @@ export const {
   updateIngredient,
   addIngredientsToRecipe,
   clearAll,
+  setAllRecipes,
 } = recipesSlice.actions;
 
 export default recipesSlice.reducer;

@@ -12,7 +12,9 @@ import { ALL_UNITS, formatQuantityWithUnit } from "@/utils/unitConversion";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -71,7 +73,6 @@ export function AddRecipeModal({
   // Edit ingredient
   const [editingIngredient, setEditingIngredient] =
     useState<RecipeIngredient | null>(null);
-  const [scrollY, setScrollY] = useState(0);
 
   // Filter pantry items for suggestions
   const suggestedItems = newIngredientName.trim()
@@ -411,116 +412,117 @@ export function AddRecipeModal({
           </View>
         )}
 
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-          onScroll={(event) => {
-            setScrollY(event.nativeEvent.contentOffset.y);
-          }}
-          scrollEventThrottle={16}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
-          <View style={styles.inputGroup}>
-            <ChopText size="small" variant="muted" style={styles.label}>
-              Recipe Name *
-            </ChopText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: darkMode ? "#222" : "#f5f5f5",
-                  color: darkMode ? "#fff" : "#000",
-                },
-              ]}
-              ref={nameRef}
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g., Fried Rice, Chocolate Cake"
-              placeholderTextColor={darkMode ? "#666" : "#999"}
-              returnKeyType="next"
-              onSubmitEditing={() => descriptionRef.current?.focus()}
-            />
-          </View>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.inputGroup}>
+              <ChopText size="small" variant="muted" style={styles.label}>
+                Recipe Name *
+              </ChopText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                    color: darkMode ? "#fff" : "#000",
+                  },
+                ]}
+                ref={nameRef}
+                value={name}
+                onChangeText={setName}
+                placeholder="e.g., Fried Rice, Chocolate Cake"
+                placeholderTextColor={darkMode ? "#666" : "#999"}
+                returnKeyType="next"
+                onSubmitEditing={() => descriptionRef.current?.focus()}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <ChopText size="small" variant="muted" style={styles.label}>
-              Description (Optional)
-            </ChopText>
-            <TextInput
-              style={[
-                styles.input,
-                styles.textArea,
-                {
-                  backgroundColor: darkMode ? "#222" : "#f5f5f5",
-                  color: darkMode ? "#fff" : "#000",
-                },
-              ]}
-              ref={descriptionRef}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Brief description of the recipe"
-              placeholderTextColor={darkMode ? "#666" : "#999"}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <ChopText size="small" variant="muted" style={styles.label}>
+                Description (Optional)
+              </ChopText>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  {
+                    backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                    color: darkMode ? "#fff" : "#000",
+                  },
+                ]}
+                ref={descriptionRef}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Brief description of the recipe"
+                placeholderTextColor={darkMode ? "#666" : "#999"}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <ChopText size="small" variant="muted" style={styles.label}>
-              Servings *
-            </ChopText>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: darkMode ? "#222" : "#f5f5f5",
-                  color: darkMode ? "#fff" : "#000",
-                },
-              ]}
-              ref={servingsRef}
-              value={servings}
-              onChangeText={setServings}
-              placeholder="4"
-              placeholderTextColor={darkMode ? "#666" : "#999"}
-              keyboardType="number-pad"
-              returnKeyType="next"
-              onSubmitEditing={() => ingredientNameRef.current?.focus()}
-            />
-          </View>
+            <View style={styles.inputGroup}>
+              <ChopText size="small" variant="muted" style={styles.label}>
+                Servings *
+              </ChopText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                    color: darkMode ? "#fff" : "#000",
+                  },
+                ]}
+                ref={servingsRef}
+                value={servings}
+                onChangeText={setServings}
+                placeholder="4"
+                placeholderTextColor={darkMode ? "#666" : "#999"}
+                keyboardType="number-pad"
+                returnKeyType="next"
+                onSubmitEditing={() => ingredientNameRef.current?.focus()}
+              />
+            </View>
 
-          <View style={styles.inputGroup}>
-            <ChopText size="small" variant="muted" style={styles.label}>
-              Ingredients ({ingredients.length})
-            </ChopText>
+            <View style={styles.inputGroup}>
+              <ChopText size="small" variant="muted" style={styles.label}>
+                Ingredients ({ingredients.length})
+              </ChopText>
 
-            {/* Current ingredients list */}
-            {ingredients.length > 0 && (
-              <View style={styles.ingredientsList}>
-                {ingredients.map((ingredient) => (
-                  <TouchableOpacity
-                    key={ingredient.id}
-                    onPress={() => handleEditIngredient(ingredient)}
-                  >
-                    <View
-                      style={[
-                        styles.ingredientItem,
-                        { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
-                      ]}
+              {/* Current ingredients list */}
+              {ingredients.length > 0 && (
+                <View style={styles.ingredientsList}>
+                  {ingredients.map((ingredient) => (
+                    <TouchableOpacity
+                      key={ingredient.id}
+                      onPress={() => handleEditIngredient(ingredient)}
                     >
-                      <View style={styles.ingredientInfo}>
-                        <ChopText size="small" weight="semibold">
-                          {ingredient.name}
-                        </ChopText>
-                        <ChopText size="xs" variant="muted">
-                          {formatQuantityWithUnit(
-                            ingredient.quantity,
-                            ingredient.unit
-                          )}
-                        </ChopText>
-                      </View>
-                      <View style={styles.ingredientActions}>
-                        {/* <TouchableOpacity
+                      <View
+                        style={[
+                          styles.ingredientItem,
+                          { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
+                        ]}
+                      >
+                        <View style={styles.ingredientInfo}>
+                          <ChopText size="small" weight="semibold">
+                            {ingredient.name}
+                          </ChopText>
+                          <ChopText size="xs" variant="muted">
+                            {formatQuantityWithUnit(
+                              ingredient.quantity,
+                              ingredient.unit
+                            )}
+                          </ChopText>
+                        </View>
+                        <View style={styles.ingredientActions}>
+                          {/* <TouchableOpacity
                           onPress={() => handleEditIngredient(ingredient)}
                           style={{ marginRight: 12 }}
                         >
@@ -530,183 +532,182 @@ export function AddRecipeModal({
                             color={themeColor}
                           />
                         </TouchableOpacity> */}
-                        <TouchableOpacity
-                          onPress={() => handleRemoveIngredient(ingredient.id)}
-                        >
-                          <IconSymbol
-                            name="xmark.circle.fill"
-                            size={20}
-                            color="#ff3b30"
-                          />
-                        </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() =>
+                              handleRemoveIngredient(ingredient.id)
+                            }
+                          >
+                            <IconSymbol
+                              name="xmark.circle.fill"
+                              size={20}
+                              color="#ff3b30"
+                            />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Add/Edit ingredient section */}
-            <>
-              {editingIngredient && (
-                <View
-                  style={[
-                    styles.editingBanner,
-                    { backgroundColor: darkMode ? "#2a2a2a" : "#e8f4f8" },
-                  ]}
-                >
-                  <ChopText size="xs" variant="muted">
-                    Editing: {editingIngredient.name}
-                  </ChopText>
-                  <TouchableOpacity onPress={handleCancelEdit}>
-                    <ChopText size="xs" variant="theme">
-                      Cancel
-                    </ChopText>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
 
-              <View style={styles.addIngredientFormColumn}>
-                <TextInput
-                  ref={ingredientNameRef}
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: darkMode ? "#222" : "#f5f5f5",
-                      color: darkMode ? "#fff" : "#000",
-                    },
-                  ]}
-                  value={newIngredientName}
-                  onChangeText={(text) => {
-                    setNewIngredientName(text);
-                    setShowSuggestions(text.trim().length > 0);
-                  }}
-                  onFocus={() => {
-                    // Scroll down just enough to reveal the quantity input row
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollTo({
-                        y: scrollY + 60,
-                        animated: true,
-                      });
-                    }, 50);
-                  }}
-                  placeholder="Ingredient name"
-                  placeholderTextColor={darkMode ? "#666" : "#999"}
-                  returnKeyType="next"
-                  onSubmitEditing={() => ingredientQuantityRef.current?.focus()}
-                  submitBehavior="submit"
-                />
-
-                {/* Pantry suggestions */}
-                {showSuggestions && suggestedItems.length > 0 && (
+              {/* Add/Edit ingredient section */}
+              <>
+                {editingIngredient && (
                   <View
                     style={[
-                      styles.suggestionsContainer,
-                      { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
+                      styles.editingBanner,
+                      { backgroundColor: darkMode ? "#2a2a2a" : "#e8f4f8" },
                     ]}
                   >
-                    {suggestedItems.map((item) => (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={[
-                          styles.suggestionItem,
-                          { borderBottomColor: darkMode ? "#333" : "#eee" },
-                        ]}
-                        onPress={() => handleSelectSuggestion(item)}
-                      >
-                        <View style={styles.suggestionInfo}>
-                          <ChopText size="small" weight="semibold">
-                            {item.name}
-                          </ChopText>
-                          <ChopText size="xs" variant="muted">
-                            {formatQuantityWithUnit(item.quantity, item.unit)}
-                          </ChopText>
-                        </View>
-                        <IconSymbol
-                          name="plus.circle"
-                          size={18}
-                          color={themeColor}
-                        />
-                      </TouchableOpacity>
-                    ))}
+                    <ChopText size="xs" variant="muted">
+                      Editing: {editingIngredient.name}
+                    </ChopText>
+                    <TouchableOpacity onPress={handleCancelEdit}>
+                      <ChopText size="xs" variant="theme">
+                        Cancel
+                      </ChopText>
+                    </TouchableOpacity>
                   </View>
                 )}
 
-                <View ref={quantityRowRef} style={styles.quantityUnitAddRow}>
+                <View style={styles.addIngredientFormColumn}>
                   <TextInput
-                    ref={ingredientQuantityRef}
+                    ref={ingredientNameRef}
                     style={[
                       styles.input,
-                      styles.ingredientQuantityInput,
                       {
                         backgroundColor: darkMode ? "#222" : "#f5f5f5",
                         color: darkMode ? "#fff" : "#000",
                       },
                     ]}
-                    value={newIngredientQuantity}
-                    onChangeText={setNewIngredientQuantity}
-                    placeholder="Qty"
+                    value={newIngredientName}
+                    onChangeText={(text) => {
+                      setNewIngredientName(text);
+                      setShowSuggestions(text.trim().length > 0);
+                    }}
+                    placeholder="Ingredient name"
                     placeholderTextColor={darkMode ? "#666" : "#999"}
-                    keyboardType="decimal-pad"
-                    returnKeyType="done"
-                    onSubmitEditing={handleAddManualIngredient}
+                    returnKeyType="next"
+                    onSubmitEditing={() =>
+                      ingredientQuantityRef.current?.focus()
+                    }
+                    submitBehavior="submit"
                   />
-                  <View
-                    style={[
-                      styles.unitPickerContainer,
-                      { backgroundColor: darkMode ? "#222" : "#f5f5f5" },
-                    ]}
-                  >
-                    <RNPickerSelect
-                      value={newIngredientUnit || ""}
-                      onValueChange={(value) =>
-                        setNewIngredientUnit(value || "")
-                      }
-                      items={[
-                        { label: "(no unit)", value: "" },
-                        ...ALL_UNITS.map((unitOption) => ({
-                          label: unitOption.label,
-                          value: unitOption.value,
-                        })),
-                      ]}
-                      style={{
-                        inputIOS: {
-                          ...styles.unitPicker,
-                          color: darkMode ? "#fff" : "#000",
-                        },
-                        inputAndroid: {
-                          ...styles.unitPicker,
-                          color: darkMode ? "#fff" : "#000",
-                        },
-                      }}
-                      placeholder={{}}
-                      useNativeAndroidPickerStyle={false}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: themeColor }]}
-                    onPress={handleAddManualIngredient}
-                  >
-                    <IconSymbol
-                      name={editingIngredient ? "checkmark" : "plus"}
-                      size={20}
-                      color="#fff"
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </>
-          </View>
 
-          <View>
-            <ChopText size="xs" variant="muted">
-              * Required fields
-            </ChopText>
-            <ChopText size="xs" variant="muted" style={{ marginTop: 4 }}>
-              Manually added ingredients won't be added to your pantry list
-            </ChopText>
-          </View>
-        </ScrollView>
+                  {/* Pantry suggestions */}
+                  {showSuggestions && suggestedItems.length > 0 && (
+                    <View
+                      style={[
+                        styles.suggestionsContainer,
+                        { backgroundColor: darkMode ? "#1a1a1a" : "#f9f9f9" },
+                      ]}
+                    >
+                      {suggestedItems.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={[
+                            styles.suggestionItem,
+                            { borderBottomColor: darkMode ? "#333" : "#eee" },
+                          ]}
+                          onPress={() => handleSelectSuggestion(item)}
+                        >
+                          <View style={styles.suggestionInfo}>
+                            <ChopText size="small" weight="semibold">
+                              {item.name}
+                            </ChopText>
+                            <ChopText size="xs" variant="muted">
+                              {formatQuantityWithUnit(item.quantity, item.unit)}
+                            </ChopText>
+                          </View>
+                          <IconSymbol
+                            name="plus.circle"
+                            size={18}
+                            color={themeColor}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  <View ref={quantityRowRef} style={styles.quantityUnitAddRow}>
+                    <TextInput
+                      ref={ingredientQuantityRef}
+                      style={[
+                        styles.input,
+                        styles.ingredientQuantityInput,
+                        {
+                          backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                          color: darkMode ? "#fff" : "#000",
+                        },
+                      ]}
+                      value={newIngredientQuantity}
+                      onChangeText={setNewIngredientQuantity}
+                      placeholder="Qty"
+                      placeholderTextColor={darkMode ? "#666" : "#999"}
+                      keyboardType="decimal-pad"
+                      returnKeyType="done"
+                      onSubmitEditing={handleAddManualIngredient}
+                    />
+                    <View
+                      style={[
+                        styles.unitPickerContainer,
+                        { backgroundColor: darkMode ? "#222" : "#f5f5f5" },
+                      ]}
+                    >
+                      <RNPickerSelect
+                        value={newIngredientUnit || ""}
+                        onValueChange={(value) =>
+                          setNewIngredientUnit(value || "")
+                        }
+                        items={[
+                          { label: "(no unit)", value: "" },
+                          ...ALL_UNITS.map((unitOption) => ({
+                            label: unitOption.label,
+                            value: unitOption.value,
+                          })),
+                        ]}
+                        style={{
+                          inputIOS: {
+                            ...styles.unitPicker,
+                            color: darkMode ? "#fff" : "#000",
+                          },
+                          inputAndroid: {
+                            ...styles.unitPicker,
+                            color: darkMode ? "#fff" : "#000",
+                          },
+                        }}
+                        placeholder={{}}
+                        useNativeAndroidPickerStyle={false}
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.addButton,
+                        { backgroundColor: themeColor },
+                      ]}
+                      onPress={handleAddManualIngredient}
+                    >
+                      <IconSymbol
+                        name={editingIngredient ? "checkmark" : "plus"}
+                        size={20}
+                        color="#fff"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            </View>
+
+            <View>
+              <ChopText size="xs" variant="muted">
+                * Required fields
+              </ChopText>
+              <ChopText size="xs" variant="muted" style={{ marginTop: 4 }}>
+                Manually added ingredients won't be added to your pantry list
+              </ChopText>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );

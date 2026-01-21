@@ -23,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SyncStatusIndicator } from "@/components/sync-status-indicator";
 
 export default function RecipesScreen() {
   const dispatch = useAppDispatch();
@@ -304,14 +305,12 @@ export default function RecipesScreen() {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <ChopText
-            size="xxl"
-            weight="bold"
-            variant="theme"
-            style={styles.title}
-          >
-            Recipes
-          </ChopText>
+          <View style={styles.titleRow}>
+            <ChopText size="xxl" weight="bold" variant="theme">
+              Recipes
+            </ChopText>
+            <SyncStatusIndicator />
+          </View>
           {multiSelectMode && (
             <View style={styles.multiSelectToolbar}>
               <ChopText size="small" variant="muted">
@@ -608,7 +607,10 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
   },
-  title: {
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   multiSelectToolbar: {

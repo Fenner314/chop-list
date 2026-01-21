@@ -42,6 +42,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { DynamicIcon } from "@/components/dynamic-icon";
 import { getIconFamily } from "@/constants/food-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SyncStatusIndicator } from "@/components/sync-status-indicator";
 
 // Type for list items that includes both items and category headers
 type ListItem =
@@ -708,14 +709,12 @@ export default function PantryListScreen() {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <ChopText
-              size="xxl"
-              weight="bold"
-              variant="theme"
-              style={styles.title}
-            >
-              Pantry List
-            </ChopText>
+            <View style={styles.titleRow}>
+              <ChopText size="xxl" weight="bold" variant="theme">
+                Pantry List
+              </ChopText>
+              <SyncStatusIndicator />
+            </View>
 
             {/* Search Bar */}
             <SearchInput
@@ -940,7 +939,10 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
   },
-  title: {
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   multiSelectToolbar: {

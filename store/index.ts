@@ -8,6 +8,7 @@ import pantryListReducer from './slices/pantryListSlice';
 import recipesReducer from './slices/recipesSlice';
 import itemsReducer from './slices/itemsSlice';
 import { migrateToItemsSlice } from './migrations/migrateToItemsSlice';
+import { syncMiddleware } from './middleware/syncMiddleware';
 
 // Migration function to move from separate lists to centralized items
 const migrations = {
@@ -56,7 +57,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }),
+    }).concat(syncMiddleware),
 });
 
 export const persistor = persistStore(store);

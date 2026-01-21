@@ -184,7 +184,6 @@ const itemsSlice = createSlice({
     ) => {
       const { itemId, name, quantity, unit, category, listType } = action.payload;
       const item = state.items.find((i) => i.id === itemId);
-      debugger;
       if (item) {
         if (name !== undefined) item.name = name;
         if (category !== undefined) item.category = category;
@@ -422,6 +421,11 @@ const itemsSlice = createSlice({
       state.items = [];
     },
 
+    // Set all items (for sync from Firebase)
+    setAllItems: (state, action: PayloadAction<Item[]>) => {
+      state.items = action.payload;
+    },
+
     // Subtract recipe ingredients from pantry quantities
     subtractRecipeFromPantry: (
       state,
@@ -485,6 +489,7 @@ export const {
   clearExpiredPantry,
   clearAllFromList,
   clearAllItems,
+  setAllItems,
   subtractRecipeFromPantry,
 } = itemsSlice.actions;
 
