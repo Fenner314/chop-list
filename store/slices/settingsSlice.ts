@@ -48,6 +48,7 @@ export interface SettingsState {
   recipesSettings: {
     sortBy: "manual" | "alphabetical" | "date";
     defaultServings: number;
+    geminiApiKey: string;
   };
 
   // Account Settings
@@ -88,6 +89,7 @@ const initialState: SettingsState = {
   recipesSettings: {
     sortBy: "alphabetical",
     defaultServings: 4,
+    geminiApiKey: "",
   },
   accountSettings: {
     username: "",

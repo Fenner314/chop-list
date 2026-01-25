@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.choplist.ios",
-      "googleServicesFile": "./config/prod/GoogleService-Info.plist"
+      "googleServicesFile": "./config/prod/GoogleService-Info.plist",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Chop List to access your camera to scan recipes"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -57,6 +60,12 @@
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0"
           }
+        }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Allow Chop List to access your camera to scan recipes"
         }
       ]
     ],

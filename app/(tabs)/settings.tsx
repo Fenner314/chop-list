@@ -1,11 +1,10 @@
 import { AnimatedCaret } from "@/components/animated-caret";
 import { CategoryModal } from "@/components/category-modal";
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { SpaceSwitcher } from "@/components/sharing/SpaceSwitcher";
 import { PendingInvitesModal } from "@/components/sharing/PendingInvitesModal";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { SpaceSwitcher } from "@/components/sharing/SpaceSwitcher";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "expo-router";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   addCategory,
   Category,
@@ -14,14 +13,16 @@ import {
   setFontSize,
   setThemeColor,
   updateCategory,
+  updatePantryListSettings,
   updateRecipesSettings,
   updateShoppingListSettings,
-  updatePantryListSettings,
 } from "@/store/slices/settingsSlice";
-import React, { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -33,12 +34,28 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// Supported sections for deep linking
+export type SettingsSection =
+  | "categories"
+  | "shoppingList"
+  | "pantryList"
+  | "recipes"
+  | "account";
+// Supported focus fields for deep linking
+export type SettingsFocusField = "geminiApiKey";
+
 export default function SettingsScreen() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { user, isAuthenticated, signOut } = useAuth();
   const settings = useAppSelector((state) => state.settings);
   const { themeColor, fontSize, darkMode, categories } = settings;
+
+  // Deep linking params for auto-expanding sections and focusing fields
+  const { expandSection, focusField } = useLocalSearchParams<{
+    expandSection?: SettingsSection;
+    focusField?: SettingsFocusField;
+  }>();
 
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<
@@ -50,6 +67,49 @@ export default function SettingsScreen() {
   const [recipesExpanded, setRecipesExpanded] = useState(false);
   const [accountExpanded, setAccountExpanded] = useState(false);
   const [invitesModalVisible, setInvitesModalVisible] = useState(false);
+
+  // API key input state
+  const [newApiKey, setNewApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const hasApiKey = Boolean(settings.recipesSettings.geminiApiKey?.trim());
+
+  // Refs for focusable inputs
+  const geminiApiKeyRef = useRef<TextInput>(null);
+
+  // Handle deep linking to expand sections and focus fields
+  useEffect(() => {
+    if (expandSection) {
+      switch (expandSection) {
+        case "categories":
+          setCategoriesExpanded(true);
+          break;
+        case "shoppingList":
+          setShoppingListExpanded(true);
+          break;
+        case "pantryList":
+          setPantryListExpanded(true);
+          break;
+        case "recipes":
+          setRecipesExpanded(true);
+          break;
+        case "account":
+          setAccountExpanded(true);
+          break;
+      }
+    }
+
+    // Focus the specified field after a short delay to allow section to expand
+    if (focusField) {
+      const timer = setTimeout(() => {
+        switch (focusField) {
+          case "geminiApiKey":
+            geminiApiKeyRef.current?.focus();
+            break;
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [expandSection, focusField]);
 
   const fontSizeValue =
     fontSize === "small" ? 14 : fontSize === "large" ? 20 : 16;
@@ -116,7 +176,7 @@ export default function SettingsScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
           <Text
             style={[
               styles.mainTitle,
@@ -517,6 +577,198 @@ export default function SettingsScreen() {
                     maxLength={2}
                   />
                 </View>
+                <View
+                  style={[
+                    styles.settingRow,
+                    {
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      gap: 8,
+                    },
+                  ]}
+                >
+                  <View>
+                    <Text
+                      style={[
+                        styles.settingLabel,
+                        {
+                          fontSize: fontSizeValue,
+                          color: darkMode ? "#fff" : "#333",
+                        },
+                      ]}
+                    >
+                      Gemini API Key
+                    </Text>
+                    <Text
+                      style={[
+                        styles.settingDescription,
+                        {
+                          fontSize: fontSizeValue - 2,
+                          color: darkMode ? "#999" : "#666",
+                        },
+                      ]}
+                    >
+                      Required for recipe scanning. Get a free key at{" "}
+                      <Text
+                        style={{
+                          color: themeColor,
+                          textDecorationLine: "underline",
+                        }}
+                        onPress={() =>
+                          Linking.openURL("https://aistudio.google.com/apikey")
+                        }
+                      >
+                        aistudio.google.com
+                      </Text>
+                    </Text>
+                  </View>
+                  {hasApiKey ? (
+                    // Display saved API key (read-only)
+                    <View style={styles.apiKeyDisplayRow}>
+                      <View
+                        style={[
+                          styles.apiKeyDisplayContainer,
+                          {
+                            backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                            borderColor: darkMode ? "#444" : "#ddd",
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.apiKeyText,
+                            {
+                              fontSize: fontSizeValue,
+                              color: darkMode ? "#fff" : "#333",
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          ••••••••••••••••••••••••••••••••
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.apiKeyDeleteButton,
+                          { backgroundColor: darkMode ? "#331111" : "#ffeeee" },
+                        ]}
+                        onPress={() => {
+                          Alert.alert(
+                            "Delete API Key",
+                            "Are you sure you want to delete your Gemini API key?",
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              {
+                                text: "Delete",
+                                style: "destructive",
+                                onPress: () => {
+                                  dispatch(
+                                    updateRecipesSettings({ geminiApiKey: "" })
+                                  );
+                                  setShowApiKey(false);
+                                },
+                              },
+                            ]
+                          );
+                        }}
+                      >
+                        <IconSymbol name="trash" size={18} color="#ff3b30" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    // Input for adding new API key
+                    <View style={styles.apiKeyInputColumn}>
+                      <View
+                        style={[
+                          styles.apiKeyInputContainer,
+                          {
+                            backgroundColor: darkMode ? "#222" : "#f5f5f5",
+                            borderColor: darkMode ? "#444" : "#ddd",
+                          },
+                        ]}
+                      >
+                        <TextInput
+                          ref={geminiApiKeyRef}
+                          style={[
+                            styles.apiKeyInput,
+                            {
+                              fontSize: fontSizeValue,
+                              color: darkMode ? "#fff" : "#333",
+                            },
+                          ]}
+                          value={newApiKey}
+                          onChangeText={setNewApiKey}
+                          placeholder="Enter your Gemini API key"
+                          placeholderTextColor={darkMode ? "#666" : "#999"}
+                          secureTextEntry={!showApiKey}
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          submitBehavior="submit"
+                        />
+                        <TouchableOpacity
+                          style={styles.apiKeyInlineButton}
+                          onPress={() => setShowApiKey(!showApiKey)}
+                        >
+                          <IconSymbol
+                            name={showApiKey ? "eye.slash" : "eye"}
+                            size={20}
+                            color={darkMode ? "#999" : "#666"}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.apiKeySaveButton,
+                          {
+                            backgroundColor: newApiKey.trim()
+                              ? themeColor
+                              : darkMode
+                              ? "#333"
+                              : "#e5e5e5",
+                          },
+                        ]}
+                        onPress={() => {
+                          if (newApiKey.trim()) {
+                            dispatch(
+                              updateRecipesSettings({
+                                geminiApiKey: newApiKey.trim(),
+                              })
+                            );
+                            setNewApiKey("");
+                            setShowApiKey(false);
+                          }
+                        }}
+                        disabled={!newApiKey.trim()}
+                      >
+                        <IconSymbol
+                          name="checkmark"
+                          size={18}
+                          color={
+                            newApiKey.trim()
+                              ? "#fff"
+                              : darkMode
+                              ? "#666"
+                              : "#999"
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.apiKeySaveButtonText,
+                            {
+                              color: newApiKey.trim()
+                                ? "#fff"
+                                : darkMode
+                                ? "#666"
+                                : "#999",
+                            },
+                          ]}
+                        >
+                          Save API Key
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -569,7 +821,9 @@ export default function SettingsScreen() {
             >
               <View style={styles.accountInfo}>
                 <IconSymbol
-                  name={isAuthenticated ? "person.circle.fill" : "person.circle"}
+                  name={
+                    isAuthenticated ? "person.circle.fill" : "person.circle"
+                  }
                   size={24}
                   color={themeColor}
                 />
@@ -583,7 +837,9 @@ export default function SettingsScreen() {
                       },
                     ]}
                   >
-                    {isAuthenticated ? user?.displayName || "Signed In" : "Not Signed In"}
+                    {isAuthenticated
+                      ? user?.displayName || "Signed In"
+                      : "Not Signed In"}
                   </Text>
                   {isAuthenticated && user?.email && (
                     <Text
@@ -632,12 +888,13 @@ export default function SettingsScreen() {
                       );
                     }}
                   >
-                    <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color="#ff3b30" />
+                    <IconSymbol
+                      name="rectangle.portrait.and.arrow.right"
+                      size={20}
+                      color="#ff3b30"
+                    />
                     <Text
-                      style={[
-                        styles.signOutText,
-                        { fontSize: fontSizeValue },
-                      ]}
+                      style={[styles.signOutText, { fontSize: fontSizeValue }]}
                     >
                       Sign Out
                     </Text>
@@ -650,12 +907,13 @@ export default function SettingsScreen() {
                     ]}
                     onPress={() => router.push("/(auth)/login")}
                   >
-                    <IconSymbol name="person.badge.plus" size={20} color="#fff" />
+                    <IconSymbol
+                      name="person.badge.plus"
+                      size={20}
+                      color="#fff"
+                    />
                     <Text
-                      style={[
-                        styles.signInText,
-                        { fontSize: fontSizeValue },
-                      ]}
+                      style={[styles.signInText, { fontSize: fontSizeValue }]}
                     >
                       Sign In or Create Account
                     </Text>
@@ -848,6 +1106,67 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     textAlign: "center",
     paddingHorizontal: 8,
+  },
+  apiKeyDisplayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+  },
+  apiKeyDisplayContainer: {
+    flex: 1,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingLeft: 12,
+    paddingRight: 4,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  apiKeyText: {
+    flex: 1,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  },
+  apiKeyInlineButton: {
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  apiKeyDeleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  apiKeyInputColumn: {
+    width: "100%",
+    gap: 12,
+  },
+  apiKeyInputContainer: {
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingLeft: 12,
+    paddingRight: 4,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  apiKeyInput: {
+    flex: 1,
+    height: 44,
+  },
+  apiKeySaveButton: {
+    height: 44,
+    borderRadius: 8,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  apiKeySaveButtonText: {
+    fontWeight: "600",
   },
   accountInfo: {
     flexDirection: "row",

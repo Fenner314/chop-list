@@ -33,7 +33,7 @@ const itemSyncActions = [
 const recipeSyncActions = [
   'recipes/addRecipe',
   'recipes/updateRecipe',
-  'recipes/deleteRecipe',
+  'recipes/removeRecipe',
   'recipes/toggleFavorite',
 ];
 
@@ -43,8 +43,22 @@ const syncFromFirebaseActions = [
   'recipes/setAllRecipes',
 ];
 
+// Actions that may delete items (need to capture state before action)
+const itemDeletionActions = [
+  'items/clearCompletedShopping',
+  'items/clearExpiredPantry',
+  'items/clearAllFromList',
+  'items/clearAllItems',
+  'items/removeItemFromList',
+];
+
 export const syncMiddleware: Middleware = (store) => (next) => (action: any) => {
-  // Execute the action first
+  // Capture items BEFORE the action for deletion detection
+  const stateBefore = store.getState();
+  const itemsBefore: Item[] = stateBefore.items?.items || [];
+  const sharingEnabledBefore = stateBefore.settings?.sharingEnabled;
+
+  // Execute the action
   const result = next(action);
 
   // Skip if we're receiving data from Firebase (prevents loops)
@@ -57,42 +71,54 @@ export const syncMiddleware: Middleware = (store) => (next) => (action: any) => 
     return result;
   }
 
-  // Check if sharing is enabled
-  const state = store.getState();
-  const sharingEnabled = state.settings?.sharingEnabled;
-
-  if (!sharingEnabled) {
+  // Check if sharing is enabled (use before state to ensure we sync deletions even if sharing was just disabled)
+  if (!sharingEnabledBefore) {
     return result;
   }
 
   // Handle item sync actions
   if (itemSyncActions.includes(action.type)) {
     console.log('[SyncMiddleware] Item action detected:', action.type);
-    const items: Item[] = state.items?.items || [];
+    const stateAfter = store.getState();
+    const itemsAfter: Item[] = stateAfter.items?.items || [];
 
-    // For bulk operations, sync all affected items
-    if (action.type === 'items/clearCompletedShopping' ||
-        action.type === 'items/uncheckAllShopping' ||
-        action.type === 'items/clearExpiredPantry' ||
-        action.type === 'items/clearAllFromList' ||
-        action.type === 'items/clearAllItems' ||
+    // For bulk deletion operations, find and sync deleted items
+    if (itemDeletionActions.includes(action.type)) {
+      // Find items that were completely deleted
+      const deletedItemIds = itemsBefore
+        .filter((itemBefore) => !itemsAfter.find((itemAfter) => itemAfter.id === itemBefore.id))
+        .map((item) => item.id);
+
+      // Push deletions for completely removed items
+      deletedItemIds.forEach((itemId) => {
+        console.log('[SyncMiddleware] Pushing item deletion:', itemId);
+        syncService.pushItemDelete(itemId).catch(console.error);
+      });
+
+      // Find items that were modified (still exist but may have changed)
+      const modifiedItems = itemsAfter.filter((itemAfter) => {
+        const itemBefore = itemsBefore.find((i) => i.id === itemAfter.id);
+        // Item exists in both states - check if it changed
+        return itemBefore && JSON.stringify(itemBefore) !== JSON.stringify(itemAfter);
+      });
+
+      // Push changes for modified items
+      modifiedItems.forEach((item) => {
+        console.log('[SyncMiddleware] Pushing item change:', item.name);
+        syncService.pushItemChange(item).catch(console.error);
+      });
+
+      return result;
+    }
+
+    // For reorder and uncheck operations, sync all affected items
+    if (action.type === 'items/uncheckAllShopping' ||
         action.type === 'items/reorderPantryItems' ||
         action.type === 'items/reorderShoppingItems') {
       // Sync all items for bulk operations
-      items.forEach((item) => {
+      itemsAfter.forEach((item) => {
         syncService.pushItemChange(item).catch(console.error);
       });
-    } else if (action.type === 'items/removeItemFromList') {
-      // Check if item was completely removed or just from one list
-      const { itemId } = action.payload;
-      const item = items.find((i) => i.id === itemId);
-      if (item) {
-        // Item still exists (removed from one list but still in another)
-        syncService.pushItemChange(item).catch(console.error);
-      } else {
-        // Item was completely removed
-        syncService.pushItemDelete(itemId).catch(console.error);
-      }
     } else {
       // For single item operations, find and sync the affected item
       let itemId: string | undefined;
@@ -102,12 +128,12 @@ export const syncMiddleware: Middleware = (store) => (next) => (action: any) => 
       } else if (action.payload?.name) {
         // For addItemToList, find by name (case-insensitive)
         const name = action.payload.name.toLowerCase();
-        const item = items.find((i) => i.name.toLowerCase() === name);
+        const item = itemsAfter.find((i) => i.name.toLowerCase() === name);
         itemId = item?.id;
       }
 
       if (itemId) {
-        const item = items.find((i) => i.id === itemId);
+        const item = itemsAfter.find((i) => i.id === itemId);
         if (item) {
           syncService.pushItemChange(item).catch(console.error);
         }
@@ -117,9 +143,10 @@ export const syncMiddleware: Middleware = (store) => (next) => (action: any) => 
 
   // Handle recipe sync actions
   if (recipeSyncActions.includes(action.type)) {
-    const recipes: Recipe[] = state.recipes?.recipes || [];
+    const stateAfter = store.getState();
+    const recipes: Recipe[] = stateAfter.recipes?.recipes || [];
 
-    if (action.type === 'recipes/deleteRecipe') {
+    if (action.type === 'recipes/removeRecipe') {
       syncService.pushRecipeDelete(action.payload).catch(console.error);
     } else {
       // For add/update/toggle, find and sync the affected recipe

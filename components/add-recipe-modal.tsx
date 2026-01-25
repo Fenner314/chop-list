@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectPantryItems } from "@/store/selectors/itemsSelectors";
+import { selectAllItems } from "@/store/selectors/itemsSelectors";
 import { subtractRecipeFromPantry } from "@/store/slices/itemsSlice";
 import {
   addRecipe,
@@ -33,8 +33,13 @@ interface AddRecipeModalProps {
   preselectedIngredients?: Array<{
     name: string;
     quantity: string;
+    unit?: string;
     category: string;
+    itemId?: string; // Reference to existing Item
   }>;
+  prefilledName?: string;
+  prefilledDescription?: string;
+  prefilledServings?: number;
 }
 
 export function AddRecipeModal({
@@ -42,10 +47,13 @@ export function AddRecipeModal({
   onClose,
   editRecipe,
   preselectedIngredients,
+  prefilledName,
+  prefilledDescription,
+  prefilledServings,
 }: AddRecipeModalProps) {
   const dispatch = useAppDispatch();
   const darkMode = useAppSelector((state) => state.settings.darkMode);
-  const pantryItems = useAppSelector(selectPantryItems);
+  const allItems = useAppSelector(selectAllItems);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
   const defaultServings = useAppSelector(
     (state) => state.settings.recipesSettings.defaultServings
@@ -68,15 +76,16 @@ export function AddRecipeModal({
   const [newIngredientName, setNewIngredientName] = useState("");
   const [newIngredientQuantity, setNewIngredientQuantity] = useState("");
   const [newIngredientUnit, setNewIngredientUnit] = useState<string>("");
+  const [newIngredientItemId, setNewIngredientItemId] = useState<string | undefined>(undefined);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Edit ingredient
   const [editingIngredient, setEditingIngredient] =
     useState<RecipeIngredient | null>(null);
 
-  // Filter pantry items for suggestions
+  // Filter existing items for suggestions
   const suggestedItems = newIngredientName.trim()
-    ? pantryItems
+    ? allItems
         .filter(
           (item) =>
             item.name.toLowerCase().includes(newIngredientName.toLowerCase()) &&
@@ -104,9 +113,11 @@ export function AddRecipeModal({
       setServings(editRecipe.servings.toString());
       setIngredients([...editRecipe.ingredients]);
     } else {
-      setName("");
-      setDescription("");
-      setServings(defaultServings.toString());
+      setName(prefilledName || "");
+      setDescription(prefilledDescription || "");
+      setServings(
+        prefilledServings?.toString() || defaultServings.toString()
+      );
 
       // If preselected ingredients are provided, add them
       if (preselectedIngredients && preselectedIngredients.length > 0) {
@@ -115,7 +126,9 @@ export function AddRecipeModal({
             id: `${Date.now()}-${Math.random()}`,
             name: item.name,
             quantity: item.quantity,
+            unit: item.unit,
             category: item.category,
+            itemId: item.itemId,
           })
         );
         setIngredients(preselected);
@@ -126,9 +139,10 @@ export function AddRecipeModal({
     setNewIngredientName("");
     setNewIngredientQuantity("");
     setNewIngredientUnit("");
+    setNewIngredientItemId(undefined);
     setShowSuggestions(false);
     setEditingIngredient(null);
-  }, [editRecipe, visible, preselectedIngredients, defaultServings]);
+  }, [editRecipe, visible, preselectedIngredients, prefilledName, prefilledDescription, prefilledServings, defaultServings]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -175,8 +189,10 @@ export function AddRecipeModal({
     }> = [];
 
     editRecipe.ingredients.forEach((ingredient) => {
-      const pantryItem = pantryItems.find(
-        (item) => item.name.toLowerCase() === ingredient.name.toLowerCase()
+      const pantryItem = allItems.find(
+        (item) =>
+          item.lists.pantry &&
+          item.name.toLowerCase() === ingredient.name.toLowerCase()
       );
 
       debugger;
@@ -293,21 +309,32 @@ export function AddRecipeModal({
               name: newIngredientName.trim(),
               quantity: newIngredientQuantity.trim() || "1",
               unit: newIngredientUnit || undefined,
+              itemId: newIngredientItemId,
             }
           : ing
       );
       setIngredients(updatedIngredients);
       setEditingIngredient(null);
     } else {
-      // Add new ingredient
-      const category = autoCategorizeItem(newIngredientName);
+      // Check if there's a matching existing item by name (case-insensitive)
+      const matchingItem = newIngredientItemId
+        ? allItems.find((item) => item.id === newIngredientItemId) // Get item by ID if we have it
+        : allItems.find(
+            (item) =>
+              item.name.toLowerCase() === newIngredientName.trim().toLowerCase()
+          );
+
+      // Use existing item's category if matched, otherwise auto-categorize
+      const category = matchingItem?.category || autoCategorizeItem(newIngredientName);
 
       const newIngredient: RecipeIngredient = {
         id: `${Date.now()}-${Math.random()}`,
-        name: newIngredientName.trim(),
+        // Use existing item's name casing if matched
+        name: matchingItem?.name || newIngredientName.trim(),
         quantity: newIngredientQuantity.trim() || "1",
         unit: newIngredientUnit || undefined,
         category,
+        itemId: matchingItem?.id,
       };
 
       setIngredients([...ingredients, newIngredient]);
@@ -316,6 +343,7 @@ export function AddRecipeModal({
     setNewIngredientName("");
     setNewIngredientQuantity("");
     setNewIngredientUnit("");
+    setNewIngredientItemId(undefined);
   };
 
   const handleRemoveIngredient = (ingredientId: string) => {
@@ -325,6 +353,7 @@ export function AddRecipeModal({
       setNewIngredientName("");
       setNewIngredientQuantity("");
       setNewIngredientUnit("");
+      setNewIngredientItemId(undefined);
     }
   };
 
@@ -333,6 +362,7 @@ export function AddRecipeModal({
     setNewIngredientName(ingredient.name);
     setNewIngredientQuantity(ingredient.quantity);
     setNewIngredientUnit(ingredient.unit || "");
+    setNewIngredientItemId(ingredient.itemId);
 
     // Scroll to bottom to show the input fields
     setTimeout(() => {
@@ -345,12 +375,14 @@ export function AddRecipeModal({
     setNewIngredientName("");
     setNewIngredientQuantity("");
     setNewIngredientUnit("");
+    setNewIngredientItemId(undefined);
   };
 
-  const handleSelectSuggestion = (item: any) => {
+  const handleSelectSuggestion = (item: typeof allItems[number]) => {
     setNewIngredientName(item.name);
     setNewIngredientQuantity(item.quantity);
     setNewIngredientUnit(item.unit || "");
+    setNewIngredientItemId(item.id); // Store reference to existing item
     setShowSuggestions(false);
 
     // Keep keyboard open and focus quantity input

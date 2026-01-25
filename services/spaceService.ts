@@ -97,6 +97,13 @@ export const spaceService = {
       .doc(spaceId)
       .collection('items')
       .onSnapshot((snapshot) => {
+        // Skip updates that have pending writes - this prevents stale data
+        // from overwriting optimistic local updates before Firebase acknowledges them
+        if (snapshot.metadata.hasPendingWrites) {
+          console.log('[SpaceService] Skipping items update - has pending writes');
+          return;
+        }
+
         const items = snapshot.docs.map((doc) => {
           const data = doc.data() as FirestoreItem;
           return {
@@ -122,6 +129,13 @@ export const spaceService = {
       .doc(spaceId)
       .collection('recipes')
       .onSnapshot((snapshot) => {
+        // Skip updates that have pending writes - this prevents stale data
+        // from overwriting optimistic local updates before Firebase acknowledges them
+        if (snapshot.metadata.hasPendingWrites) {
+          console.log('[SpaceService] Skipping recipes update - has pending writes');
+          return;
+        }
+
         const recipes = snapshot.docs.map((doc) => {
           const data = doc.data() as FirestoreRecipe;
           return {
@@ -185,7 +199,8 @@ export const spaceService = {
 
   // Add or update a recipe
   setRecipe: async (spaceId: string, recipe: Recipe, userId: string) => {
-    const recipeData: Omit<FirestoreRecipe, 'id'> = {
+    // Build recipeData and recursively remove undefined values
+    const recipeData = removeUndefined({
       name: recipe.name,
       description: recipe.description,
       servings: recipe.servings,
@@ -193,9 +208,9 @@ export const spaceService = {
       instructions: recipe.instructions,
       createdAt: recipe.createdAt,
       updatedAt: recipe.updatedAt,
-      syncUpdatedAt: firestore.FieldValue.serverTimestamp() as any,
+      syncUpdatedAt: firestore.FieldValue.serverTimestamp(),
       updatedBy: userId,
-    };
+    });
 
     await spacesCollection
       .doc(spaceId)
@@ -243,7 +258,8 @@ export const spaceService = {
     const recipesRef = spacesCollection.doc(spaceId).collection('recipes');
 
     recipes.forEach((recipe) => {
-      const recipeData: Omit<FirestoreRecipe, 'id'> = {
+      // Build recipeData and recursively remove undefined values
+      const recipeData = removeUndefined({
         name: recipe.name,
         description: recipe.description,
         servings: recipe.servings,
@@ -251,9 +267,9 @@ export const spaceService = {
         instructions: recipe.instructions,
         createdAt: recipe.createdAt,
         updatedAt: recipe.updatedAt,
-        syncUpdatedAt: firestore.FieldValue.serverTimestamp() as any,
+        syncUpdatedAt: firestore.FieldValue.serverTimestamp(),
         updatedBy: userId,
-      };
+      });
       batch.set(recipesRef.doc(recipe.id), recipeData);
     });
 

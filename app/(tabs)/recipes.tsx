@@ -1,9 +1,14 @@
 import { AddRecipeModal } from "@/components/add-recipe-modal";
 import { AnimatedCaret } from "@/components/animated-caret";
 import { ChopText } from "@/components/chop-text";
+import { RecipeScannerModal } from "@/components/recipe-scanner-modal";
+import { SyncStatusIndicator } from "@/components/sync-status-indicator";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ScanResult } from "@/components/recipe-scanner";
+import { convertToRecipeIngredients } from "@/services/recipeScannerService";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
+  selectAllItems,
   selectPantryItems,
   selectShoppingItems,
 } from "@/store/selectors/itemsSelectors";
@@ -14,7 +19,8 @@ import {
   removeRecipe,
 } from "@/store/slices/recipesSlice";
 import { formatQuantityWithUnit } from "@/utils/unitConversion";
-import React, { useState } from "react";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -23,15 +29,22 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SyncStatusIndicator } from "@/components/sync-status-indicator";
 
 export default function RecipesScreen() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const recipes = useAppSelector((state) => state.recipes.recipes);
+  const allItems = useAppSelector(selectAllItems);
   const shoppingItems = useAppSelector(selectShoppingItems);
   const pantryItems = useAppSelector(selectPantryItems);
   const darkMode = useAppSelector((state) => state.settings.darkMode);
   const themeColor = useAppSelector((state) => state.settings.themeColor);
+  const geminiApiKey = useAppSelector((state) => state.settings.recipesSettings.geminiApiKey);
+  const isApiKeyConfigured = Boolean(geminiApiKey?.trim());
+
+  useEffect(() => {
+    console.log({ recipes });
+  }, []);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editRecipe, setEditRecipe] = useState<Recipe | undefined>();
@@ -42,6 +55,17 @@ export default function RecipesScreen() {
   const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
     new Set()
   );
+  const [scannerVisible, setScannerVisible] = useState(false);
+  const [scannedRecipeData, setScannedRecipeData] = useState<{
+    name: string;
+    ingredients: Array<{
+      name: string;
+      quantity: string;
+      unit?: string;
+      category: string;
+      itemId?: string;
+    }>;
+  } | null>(null);
 
   const toggleRecipe = (recipeId: string) => {
     const newExpanded = new Set(expandedRecipes);
@@ -55,7 +79,53 @@ export default function RecipesScreen() {
 
   const handleAddNew = () => {
     setEditRecipe(undefined);
+    setScannedRecipeData(null);
     setModalVisible(true);
+  };
+
+  const handleScanRecipe = () => {
+    if (!isApiKeyConfigured) {
+      Alert.alert(
+        "Setup Required",
+        "Recipe scanning requires a Gemini API key. Would you like to set it up now?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Go to Settings",
+            onPress: () => router.push("/settings?expandSection=recipes&focusField=geminiApiKey"),
+          },
+        ]
+      );
+      return;
+    }
+    setScannerVisible(true);
+  };
+
+  const handleScanComplete = (result: ScanResult) => {
+    if (result.success && result.recipe) {
+      const ingredients = convertToRecipeIngredients(result.recipe.ingredients);
+
+      // Match scanned ingredients to existing items by name (case-insensitive)
+      const ingredientsWithItemIds = ingredients.map((ingredient) => {
+        const matchingItem = allItems.find(
+          (item) => item.name.toLowerCase() === ingredient.name.toLowerCase()
+        );
+        return {
+          ...ingredient,
+          // Use existing item's data when matched
+          itemId: matchingItem?.id,
+          name: matchingItem?.name || ingredient.name, // Use existing item's name casing
+          category: matchingItem?.category || ingredient.category, // Use existing item's category
+        };
+      });
+
+      setScannedRecipeData({
+        name: result.recipe.name,
+        ingredients: ingredientsWithItemIds,
+      });
+      setEditRecipe(undefined);
+      setModalVisible(true);
+    }
   };
 
   const handleEditRecipe = (recipe: Recipe) => {
@@ -135,15 +205,17 @@ export default function RecipesScreen() {
   };
 
   // Helper function to get recipe checkbox state
-  const getRecipeCheckboxState = (recipe: Recipe): 'checked' | 'indeterminate' | 'unchecked' => {
+  const getRecipeCheckboxState = (
+    recipe: Recipe
+  ): "checked" | "indeterminate" | "unchecked" => {
     const recipeIngredientIds = recipe.ingredients.map((ing) => ing.id);
     const selectedCount = recipeIngredientIds.filter((id) =>
       selectedIngredients.has(id)
     ).length;
 
-    if (selectedCount === 0) return 'unchecked';
-    if (selectedCount === recipeIngredientIds.length) return 'checked';
-    return 'indeterminate';
+    if (selectedCount === 0) return "unchecked";
+    if (selectedCount === recipeIngredientIds.length) return "checked";
+    return "indeterminate";
   };
 
   const handleCancelMultiSelect = () => {
@@ -154,7 +226,7 @@ export default function RecipesScreen() {
   const handleSelectAll = () => {
     // Select all ingredients from all recipes
     const allIngredientIds = new Set(
-      recipes.flatMap(recipe => recipe.ingredients.map(ing => ing.id))
+      recipes.flatMap((recipe) => recipe.ingredients.map((ing) => ing.id))
     );
     setSelectedIngredients(allIngredientIds);
   };
@@ -186,11 +258,12 @@ export default function RecipesScreen() {
     itemsToAdd.forEach((ingredient) => {
       dispatch(
         addItemToList({
-          listType: 'pantry',
+          listType: "pantry",
           name: ingredient.name,
           quantity: ingredient.quantity,
           unit: ingredient.unit,
-          category: ingredient.category || "other",
+          // Only pass category if not linked to existing item (let existing item keep its category)
+          category: ingredient.itemId ? undefined : (ingredient.category || "other"),
         })
       );
     });
@@ -253,11 +326,12 @@ export default function RecipesScreen() {
     itemsToAdd.forEach((ingredient) => {
       dispatch(
         addItemToList({
-          listType: 'shopping',
+          listType: "shopping",
           name: ingredient.name,
           quantity: ingredient.quantity,
           unit: ingredient.unit,
-          category: ingredient.category || "other",
+          // Only pass category if not linked to existing item (let existing item keep its category)
+          category: ingredient.itemId ? undefined : (ingredient.category || "other"),
         })
       );
     });
@@ -348,11 +422,16 @@ export default function RecipesScreen() {
             </ChopText>
           </View>
         ) : (
-          <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+          <ScrollView
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+          >
             {recipes.map((recipe) => {
               const isExpanded = expandedRecipes.has(recipe.id);
               const checkboxState = getRecipeCheckboxState(recipe);
-              const isSelected = checkboxState === 'checked' || checkboxState === 'indeterminate';
+              const isSelected =
+                checkboxState === "checked" ||
+                checkboxState === "indeterminate";
 
               return (
                 <View key={recipe.id} style={styles.recipeContainer}>
@@ -377,9 +456,9 @@ export default function RecipesScreen() {
                         >
                           <IconSymbol
                             name={
-                              checkboxState === 'checked'
+                              checkboxState === "checked"
                                 ? "checkmark.circle.fill"
-                                : checkboxState === 'indeterminate'
+                                : checkboxState === "indeterminate"
                                 ? "minus.circle.fill"
                                 : "circle"
                             }
@@ -395,7 +474,11 @@ export default function RecipesScreen() {
                         </TouchableOpacity>
                       )}
                       <View style={styles.recipeHeaderContent}>
-                        <ChopText size="large" weight="semibold" numberOfLines={1}>
+                        <ChopText
+                          size="large"
+                          weight="semibold"
+                          numberOfLines={1}
+                        >
                           {recipe.name}
                         </ChopText>
                         {recipe.description && (
@@ -435,7 +518,11 @@ export default function RecipesScreen() {
                               style={styles.actionButton}
                               onPress={() => handleDeleteRecipe(recipe.id)}
                             >
-                              <IconSymbol name="trash" size={18} color="#ff3b30" />
+                              <IconSymbol
+                                name="trash"
+                                size={18}
+                                color="#ff3b30"
+                              />
                             </TouchableOpacity>
                           </>
                         )}
@@ -538,13 +625,39 @@ export default function RecipesScreen() {
 
         {/* Floating Action Buttons */}
         {!multiSelectMode ? (
-          <TouchableOpacity
-            style={[styles.fab, { backgroundColor: themeColor }]}
-            onPress={handleAddNew}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="plus" size={28} color="#fff" />
-          </TouchableOpacity>
+          <>
+            {/* Scan Recipe Button */}
+            <TouchableOpacity
+              style={[
+                styles.fabSecondary,
+                isApiKeyConfigured
+                  ? { backgroundColor: themeColor }
+                  : { backgroundColor: "transparent", borderWidth: 2, borderColor: themeColor, borderStyle: "dashed" },
+              ]}
+              onPress={handleScanRecipe}
+              activeOpacity={0.8}
+            >
+              <IconSymbol
+                name="camera.fill"
+                size={24}
+                color={isApiKeyConfigured ? "#fff" : themeColor}
+              />
+              {!isApiKeyConfigured && (
+                <View style={[styles.setupBadge, { backgroundColor: themeColor }]}>
+                  <IconSymbol name="gearshape.fill" size={10} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Add Recipe Button */}
+            <TouchableOpacity
+              style={[styles.fab, { backgroundColor: themeColor }]}
+              onPress={handleAddNew}
+              activeOpacity={0.8}
+            >
+              <IconSymbol name="plus" size={28} color="#fff" />
+            </TouchableOpacity>
+          </>
         ) : (
           <>
             {/* Add to Pantry Button */}
@@ -588,8 +701,17 @@ export default function RecipesScreen() {
           onClose={() => {
             setModalVisible(false);
             setEditRecipe(undefined);
+            setScannedRecipeData(null);
           }}
           editRecipe={editRecipe}
+          prefilledName={scannedRecipeData?.name}
+          preselectedIngredients={scannedRecipeData?.ingredients}
+        />
+
+        <RecipeScannerModal
+          visible={scannerVisible}
+          onClose={() => setScannerVisible(false)}
+          onScanComplete={handleScanComplete}
         />
       </View>
     </SafeAreaView>
@@ -734,5 +856,15 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
+  },
+  setupBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

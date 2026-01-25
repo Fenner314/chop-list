@@ -6,6 +6,7 @@ export interface RecipeIngredient {
   quantity: string;
   unit?: string;
   category?: string;
+  itemId?: string; // Reference to existing Item in itemsSlice
 }
 
 export interface Recipe {
